@@ -6,7 +6,9 @@
 library(ggplot2)
 library(ggpubr)
 
-samp<-read.csv("C:\\Users\\Dropcopter2\\Downloads\\Sugar Maple Vert\\within_crown_sugar_maple_Young_2_9_2020.csv", header=T)
+
+samp<-read.csv("Data/MELNHE_SugarMapleCrownDepth.csv", header=T)
+
 
 samp$Treatment <- factor(samp$trmt,levels=c("Control","N treatment","P treatment","N+P treatment"))
 head(samp)
@@ -15,10 +17,10 @@ str(samp)
 
 ########################
 # Figure 1!
-f.area<-ggplot(samp, aes(x=scaled, y=area.cm2, col=Treatment, shape=Stand, group=Tree.ID))+
+f.area<-ggplot(samp, aes(x=scaled, y=area_cm2, col=Treatment, shape=Stand, group=Tree_ID))+
   scale_color_manual(values=c("black","blue","red", "purple"))+
   scale_shape_manual(values=c(15,16,17))+ 
-  geom_point(aes(group=Tree.ID), size=3, stroke=2)+
+  geom_point(aes(group=Tree_ID), size=3, stroke=2)+
   geom_smooth(method="lm",size=1, se=F,show.legend = FALSE, aes(size=1.4))+
   labs(y = bquote('leaf area'~(cm^2)), x = bquote('Depth in crown '~(scaled)))+coord_flip()+
   facet_wrap(~Treatment, nrow=4,strip.position="top")+
@@ -27,10 +29,10 @@ f.area<-ggplot(samp, aes(x=scaled, y=area.cm2, col=Treatment, shape=Stand, group
   scale_x_reverse( lim=c(1,0), breaks=seq(0,1,.5))
 f.area
 
-f.mass<-ggplot(samp, aes(x=scaled, y=mass.g, col=Treatment, shape=Stand, group=Tree.ID))+
+f.mass<-ggplot(samp, aes(x=scaled, y=mass.g, col=Treatment, shape=Stand, group=Tree_ID))+
   scale_color_manual(values=c("black","blue","red", "purple"))+
   scale_shape_manual(values=c(15,16,17))+ 
-  geom_point(aes(group=Tree.ID), size=3, stroke=2)+
+  geom_point(aes(group=Tree_ID), size=3, stroke=2)+
   geom_smooth(method="lm",size=1, se=F,show.legend = FALSE, aes(size=1.4))+
   labs(y = bquote('leaf mass'~(g)), x = bquote(''))+coord_flip()+
   facet_wrap(~Treatment, nrow=4,strip.position="top")+
@@ -39,10 +41,10 @@ f.mass<-ggplot(samp, aes(x=scaled, y=mass.g, col=Treatment, shape=Stand, group=T
   scale_x_reverse( lim=c(1,0), breaks=seq(0,1,.5)) 
 f.mass
 
-f.sla<-ggplot(samp, aes(x=scaled, y=SLA, col=Treatment, shape=Stand, group=Tree.ID))+
+f.sla<-ggplot(samp, aes(x=scaled, y=SLA, col=Treatment, shape=Stand, group=Tree_ID))+
   scale_color_manual(values=c("black","blue","red", "purple"))+
   scale_shape_manual(values=c(15,16,17))+ 
-  geom_point(aes(group=Tree.ID), size=3, stroke=2)+
+  geom_point(aes(group=Tree_ID), size=3, stroke=2)+
   geom_smooth(method="lm",size=1, se=F,show.legend = FALSE, aes(size=1.4))+
   labs(y = bquote('specific leaf area ('~cm^2~g^-1*')'), x = bquote(''))+coord_flip()+
   facet_wrap(~Treatment, nrow=4,strip.position="top")+
@@ -64,10 +66,10 @@ f1
 
 
 ##  FIGURE 3!
-f.C<-ggplot(samp, aes(x=scaled, y=C, col=Treatment, shape=Stand, group=Tree.ID))+
+f.C<-ggplot(samp, aes(x=scaled, y=C, col=Treatment, shape=Stand, group=Tree_ID))+
   scale_color_manual(values=c("black","blue","red", "purple"))+
   scale_shape_manual(values=c(15,16,17))+ 
-  geom_point(aes(group=Tree.ID), size=3, stroke=2)+
+  geom_point(aes(group=Tree_ID), size=3, stroke=2)+
   geom_smooth(method="lm",size=1, se=F,show.legend = FALSE, aes(size=1.4))+
   ylab("C (mg"~g^-1*")")+xlab("Depth in crown (scaled)")+coord_flip()+
   facet_wrap(~Treatment, nrow=4,strip.position="top")+
@@ -77,10 +79,10 @@ f.C<-ggplot(samp, aes(x=scaled, y=C, col=Treatment, shape=Stand, group=Tree.ID))
 f.C
 
 
-f.N<-ggplot(samp, aes(x=scaled, y=N, col=Treatment, shape=Stand, group=Tree.ID))+
+f.N<-ggplot(samp, aes(x=scaled, y=N, col=Treatment, shape=Stand, group=Tree_ID))+
   scale_color_manual(values=c("black","blue","red", "purple"))+
   scale_shape_manual(values=c(15,16,17))+ 
-  geom_point(aes(group=Tree.ID), size=3, stroke=2)+
+  geom_point(aes(group=Tree_ID), size=3, stroke=2)+
   geom_smooth(method="lm",size=1, se=F,show.legend = FALSE, aes(size=1.4))+
   ylab("N (mg"~g^-1*")")+xlab("")+coord_flip()+
   facet_wrap(~Treatment, nrow=4,strip.position="top")+
@@ -89,10 +91,10 @@ f.N<-ggplot(samp, aes(x=scaled, y=N, col=Treatment, shape=Stand, group=Tree.ID))
   scale_x_reverse( lim=c(1,0), breaks=seq(0,1,.5))
 f.N
 
-f.P<-ggplot(samp, aes(x=scaled, y=P, col=Treatment, shape=Stand, group=Tree.ID))+
+f.P<-ggplot(samp, aes(x=scaled, y=P, col=Treatment, shape=Stand, group=Tree_ID))+
   scale_color_manual(values=c("black","blue","red", "purple"))+
   scale_shape_manual(values=c(15,16,17))+ 
-  geom_point(aes(group=Tree.ID), size=3, stroke=2)+
+  geom_point(aes(group=Tree_ID), size=3, stroke=2)+
   geom_smooth(method="lm",size=1, se=F,show.legend = FALSE, aes(size=1.4))+
   ylab("P (mg"~g^-1*")")+xlab("")+coord_flip()+
   facet_wrap(~Treatment, nrow=4,strip.position="top")+
@@ -101,10 +103,10 @@ f.P<-ggplot(samp, aes(x=scaled, y=P, col=Treatment, shape=Stand, group=Tree.ID))
   scale_x_reverse( lim=c(1,0), breaks=seq(0,1,.5))
 f.P
 
-f.NP<-ggplot(samp, aes(x=scaled, y=N_P, col=Treatment, shape=Stand, group=Tree.ID))+
+f.NP<-ggplot(samp, aes(x=scaled, y=N_P, col=Treatment, shape=Stand, group=Tree_ID))+
   scale_color_manual(values=c("black","blue","red", "purple"))+
   scale_shape_manual(values=c(15,16,17))+ 
-  geom_point(aes(group=Tree.ID), size=3, stroke=2)+
+  geom_point(aes(group=Tree_ID), size=3, stroke=2)+
   geom_smooth(method="lm",size=1, se=F,show.legend = FALSE, aes(size=1.4))+
   ylab("N:P ratio")+xlab("")+coord_flip()+
   facet_wrap(~Treatment, nrow=4,strip.position="top")+
@@ -125,10 +127,10 @@ f3
 
 
 ## Figure 4!
-f.ca<-ggplot(samp, aes(x=scaled, y=Ca, col=Treatment, shape=Stand, group=Tree.ID))+
+f.ca<-ggplot(samp, aes(x=scaled, y=Ca, col=Treatment, shape=Stand, group=Tree_ID))+
   scale_color_manual(values=c("black","blue","red", "purple"))+
   scale_shape_manual(values=c(15,16,17))+ 
-  geom_point(aes(group=Tree.ID), size=3, stroke=2)+
+  geom_point(aes(group=Tree_ID), size=3, stroke=2)+
   geom_smooth(method="lm",size=1, se=F,show.legend = FALSE, aes(size=1.4))+
   ylab("Ca (mg"~g^-1*")")+xlab("Depth in crown (scaled)")+coord_flip()+
   facet_wrap(~Treatment, nrow=4,strip.position="top")+#geom_hline(yintercept=5.5, linetype="dashed", size=2)+
@@ -137,10 +139,10 @@ f.ca<-ggplot(samp, aes(x=scaled, y=Ca, col=Treatment, shape=Stand, group=Tree.ID
   scale_x_reverse( lim=c(1,0), breaks=seq(0,1,.5))
 f.ca
 
-f.mg<-ggplot(samp, aes(x=scaled, y=Mg, col=Treatment, shape=Stand, group=Tree.ID))+
+f.mg<-ggplot(samp, aes(x=scaled, y=Mg, col=Treatment, shape=Stand, group=Tree_ID))+
   scale_color_manual(values=c("black","blue","red", "purple"))+
   scale_shape_manual(values=c(15,16,17))+ 
-  geom_point(aes(group=Tree.ID), size=3, stroke=2)+
+  geom_point(aes(group=Tree_ID), size=3, stroke=2)+
   geom_smooth(method="lm",size=1, se=F,show.legend = FALSE, aes(size=1.4))+
   ylab("Mg (mg"~g^-1*")")+xlab("")+coord_flip()+
   facet_wrap(~Treatment, nrow=4,strip.position="top")+
@@ -151,10 +153,10 @@ f.mg
 
 ggarrange(f.C, f.mg, common.legend=T, legend="bottom")
 
-f.mn<-ggplot(samp, aes(x=scaled, y=Mn, col=Treatment, shape=Stand, group=Tree.ID))+
+f.mn<-ggplot(samp, aes(x=scaled, y=Mn, col=Treatment, shape=Stand, group=Tree_ID))+
   scale_color_manual(values=c("black","blue","red", "purple"))+
   scale_shape_manual(values=c(15,16,17))+ 
-  geom_point(aes(group=Tree.ID), size=3, stroke=2)+
+  geom_point(aes(group=Tree_ID), size=3, stroke=2)+
   geom_smooth(method="lm",size=1, se=F,show.legend = FALSE, aes(size=1.4))+
   ylab("Mn (mg"~g^-1*")")+xlab("")+coord_flip()+
   facet_wrap(~Treatment, nrow=4,strip.position="top")+
@@ -163,10 +165,10 @@ f.mn<-ggplot(samp, aes(x=scaled, y=Mn, col=Treatment, shape=Stand, group=Tree.ID
   scale_x_reverse( lim=c(1,0), breaks=seq(0,1,.5))
 f.mn
 
-f.al<-ggplot(samp, aes(x=scaled, y=Al, col=Treatment, shape=Stand, group=Tree.ID))+
+f.al<-ggplot(samp, aes(x=scaled, y=Al, col=Treatment, shape=Stand, group=Tree_ID))+
   scale_color_manual(values=c("black","blue","red", "purple"))+
   scale_shape_manual(values=c(15,16,17))+ 
-  geom_point(aes(group=Tree.ID), size=3, stroke=2)+
+  geom_point(aes(group=Tree_ID), size=3, stroke=2)+
   geom_smooth(method="lm",size=1, se=F,show.legend = FALSE, aes(size=1.4))+
   ylab("Al (mg"~g^-1*")")+xlab("")+coord_flip()+
   facet_wrap(~Treatment, nrow=4,strip.position="top")+
@@ -177,10 +179,10 @@ f.al
 
 
 
-f.b<-ggplot(samp, aes(x=scaled, y=B, col=Treatment, shape=Stand, group=Tree.ID))+
+f.b<-ggplot(samp, aes(x=scaled, y=B, col=Treatment, shape=Stand, group=Tree_ID))+
   scale_color_manual(values=c("black","blue","red", "purple"))+
   scale_shape_manual(values=c(15,16,17))+ 
-  geom_point(aes(group=Tree.ID), size=3, stroke=2)+
+  geom_point(aes(group=Tree_ID), size=3, stroke=2)+
   geom_smooth(method="lm",size=1, se=F,show.legend = FALSE, aes(size=1.4))+
   ylab("B (mg"~g^-1*")")+xlab("")+coord_flip()+
   facet_wrap(~Treatment, nrow=4,strip.position="top")+
@@ -189,10 +191,10 @@ f.b<-ggplot(samp, aes(x=scaled, y=B, col=Treatment, shape=Stand, group=Tree.ID))
   scale_x_reverse( lim=c(1,0), breaks=seq(0,1,.5))
 f.b
 
-f.zn<-ggplot(samp, aes(x=scaled, y=Zn, col=Treatment, shape=Stand, group=Tree.ID))+
+f.zn<-ggplot(samp, aes(x=scaled, y=Zn, col=Treatment, shape=Stand, group=Tree_ID))+
   scale_color_manual(values=c("black","blue","red", "purple"))+
   scale_shape_manual(values=c(15,16,17))+ 
-  geom_point(aes(group=Tree.ID), size=3, stroke=2)+
+  geom_point(aes(group=Tree_ID), size=3, stroke=2)+
   geom_smooth(method="lm",size=1, se=F,show.legend = FALSE, aes(size=1.4))+
   ylab("Zn (mg"~g^-1*")")+xlab("")+coord_flip()+
   facet_wrap(~Treatment, nrow=4,strip.position="top")+
@@ -214,10 +216,10 @@ f4
 # FIGURE 5 BELOW!
 
 
-f.chl<-ggplot(samp, aes(x=scaled, y=total.chl, col=Treatment, shape=Stand, group=Tree.ID))+
+f.chl<-ggplot(samp, aes(x=scaled, y=total.chl, col=Treatment, shape=Stand, group=Tree_ID))+
   scale_color_manual(values=c("black","blue","red", "purple"))+
   scale_shape_manual(values=c(15,16,17))+ 
-  geom_point(aes(group=Tree.ID), size=3, stroke=2)+
+  geom_point(aes(group=Tree_ID), size=3, stroke=2)+
   geom_smooth(method="lm",size=1, se=F,show.legend = FALSE, aes(size=1.4))+
   ylab("chlorophyll (mg"~g^-1*" FW)")+xlab("Depth in crown (scaled)")+coord_flip()+
   facet_wrap(~Treatment, nrow=4,strip.position="top")+
@@ -226,10 +228,10 @@ f.chl<-ggplot(samp, aes(x=scaled, y=total.chl, col=Treatment, shape=Stand, group
   scale_x_reverse( lim=c(1,0), breaks=seq(0,1,.5))
 f.chl
 
-f.chl.r<-ggplot(samp, aes(x=scaled, y=Chl.R, col=Treatment, shape=Stand, group=Tree.ID))+
+f.chl.r<-ggplot(samp, aes(x=scaled, y=Chl.R, col=Treatment, shape=Stand, group=Tree_ID))+
   scale_color_manual(values=c("black","blue","red", "purple"))+
   scale_shape_manual(values=c(15,16,17))+ 
-  geom_point(aes(group=Tree.ID), size=3, stroke=2)+
+  geom_point(aes(group=Tree_ID), size=3, stroke=2)+
   geom_smooth(method="lm",size=1, se=F,show.legend = FALSE, aes(size=1.4))+
   ylab("chlorophyll a:b")+xlab("")+coord_flip()+
   facet_wrap(~Treatment, nrow=4,strip.position="top")+
@@ -238,10 +240,10 @@ f.chl.r<-ggplot(samp, aes(x=scaled, y=Chl.R, col=Treatment, shape=Stand, group=T
   scale_x_reverse( lim=c(1,0), breaks=seq(0,1,.5))
 f.chl.r
 
-f.carot<-ggplot(samp, aes(x=scaled, y=carot, col=Treatment, shape=Stand, group=Tree.ID))+
+f.carot<-ggplot(samp, aes(x=scaled, y=carot, col=Treatment, shape=Stand, group=Tree_ID))+
   scale_color_manual(values=c("black","blue","red", "purple"))+
   scale_shape_manual(values=c(15,16,17))+ 
-  geom_point(aes(group=Tree.ID), size=3, stroke=2)+
+  geom_point(aes(group=Tree_ID), size=3, stroke=2)+
   geom_smooth(method="lm",size=1, se=F,show.legend = FALSE, aes(size=1.4))+
   ylab("carotenoids (mg"~g^-1*" FW)")+xlab("")+coord_flip()+
   facet_wrap(~Treatment, nrow=4,strip.position="top")+
@@ -264,10 +266,10 @@ f5
 
 
 ## Figure 6! amino acids
-f.glu<-ggplot(samp, aes(x=scaled, y=Glu, col=Treatment, shape=Stand, group=Tree.ID))+
+f.glu<-ggplot(samp, aes(x=scaled, y=Glu, col=Treatment, shape=Stand, group=Tree_ID))+
   scale_color_manual(values=c("black","blue","red", "purple"))+
   scale_shape_manual(values=c(15,16,17))+ 
-  geom_point(aes(group=Tree.ID), size=3, stroke=2)+
+  geom_point(aes(group=Tree_ID), size=3, stroke=2)+
   geom_smooth(method="lm",size=1, se=F,show.legend = FALSE, aes(size=1.4))+
   ylab("glutamic acid (nmol"~g^-1*" FW)")+xlab("")+coord_flip()+
   facet_wrap(~Treatment, nrow=4,strip.position="top")+
@@ -276,10 +278,10 @@ f.glu<-ggplot(samp, aes(x=scaled, y=Glu, col=Treatment, shape=Stand, group=Tree.
   scale_x_reverse( lim=c(1,0), breaks=seq(0,1,.5))
 f.glu
 
-f.ala<-ggplot(samp, aes(x=scaled, y=Ala, col=Treatment, shape=Stand, group=Tree.ID))+
+f.ala<-ggplot(samp, aes(x=scaled, y=Ala, col=Treatment, shape=Stand, group=Tree_ID))+
   scale_color_manual(values=c("black","blue","red", "purple"))+
   scale_shape_manual(values=c(15,16,17))+ 
-  geom_point(aes(group=Tree.ID), size=3, stroke=2)+
+  geom_point(aes(group=Tree_ID), size=3, stroke=2)+
   geom_smooth(method="lm",size=1, se=F,show.legend = FALSE, aes(size=1.4))+
   ylab("alanine (nmol"~g^-1*" FW)")+xlab("Depth in crown (scaled)")+coord_flip()+
   facet_wrap(~Treatment, nrow=4,strip.position="top")+
@@ -288,10 +290,10 @@ f.ala<-ggplot(samp, aes(x=scaled, y=Ala, col=Treatment, shape=Stand, group=Tree.
   scale_x_reverse( lim=c(1,0), breaks=seq(0,1,.5))
 f.ala
 
-f.gaba<-ggplot(samp, aes(x=scaled, y=GABA, col=Treatment, shape=Stand, group=Tree.ID))+
+f.gaba<-ggplot(samp, aes(x=scaled, y=GABA, col=Treatment, shape=Stand, group=Tree_ID))+
   scale_color_manual(values=c("black","blue","red", "purple"))+
   scale_shape_manual(values=c(15,16,17))+ 
-  geom_point(aes(group=Tree.ID), size=3, stroke=2)+
+  geom_point(aes(group=Tree_ID), size=3, stroke=2)+
   geom_smooth(method="lm",size=1, se=F,show.legend = FALSE, aes(size=1.4))+
   ylab("GABA (nmol"~g^-1*" FW)")+xlab("")+coord_flip()+
   facet_wrap(~Treatment, nrow=4,strip.position="top")+
@@ -300,10 +302,10 @@ f.gaba<-ggplot(samp, aes(x=scaled, y=GABA, col=Treatment, shape=Stand, group=Tre
   scale_x_reverse( lim=c(1,0), breaks=seq(0,1,.5))
 f.gaba
 
-f.val<-ggplot(samp, aes(x=scaled, y=Val, col=Treatment, shape=Stand, group=Tree.ID))+
+f.val<-ggplot(samp, aes(x=scaled, y=Val, col=Treatment, shape=Stand, group=Tree_ID))+
   scale_color_manual(values=c("black","blue","red", "purple"))+
   scale_shape_manual(values=c(15,16,17))+ 
-  geom_point(aes(group=Tree.ID), size=3, stroke=2)+
+  geom_point(aes(group=Tree_ID), size=3, stroke=2)+
   geom_smooth(method="lm",size=1, se=F,show.legend = FALSE, aes(size=1.4))+
   ylab("valine (nmol"~g^-1*" FW)")+xlab("")+coord_flip()+
   facet_wrap(~Treatment, nrow=4,strip.position="top")+
@@ -313,10 +315,10 @@ f.val<-ggplot(samp, aes(x=scaled, y=Val, col=Treatment, shape=Stand, group=Tree.
 f.val
 
 
-f.pro<-ggplot(samp, aes(x=scaled, y=protein, col=Treatment, shape=Stand, group=Tree.ID))+
+f.pro<-ggplot(samp, aes(x=scaled, y=protein, col=Treatment, shape=Stand, group=Tree_ID))+
   scale_color_manual(values=c("black","blue","red", "purple"))+
   scale_shape_manual(values=c(15,16,17))+ 
-  geom_point(aes(group=Tree.ID), size=3, stroke=2)+
+  geom_point(aes(group=Tree_ID), size=3, stroke=2)+
   geom_smooth(method="lm",size=1, se=F,show.legend = FALSE, aes(size=1.4))+
   labs(y = bquote("soluble protein (mg"~g^-1*" FW)"), x = "")+coord_flip()+
   facet_wrap(~Treatment, nrow=4,strip.position="top")+
@@ -339,10 +341,10 @@ f6
 
 # Figure 7! Polyamines
 
-f.put<-ggplot(samp, aes(x=scaled, y=Put, col=Treatment, shape=Stand, group=Tree.ID))+
+f.put<-ggplot(samp, aes(x=scaled, y=Put, col=Treatment, shape=Stand, group=Tree_ID))+
   scale_color_manual(values=c("black","blue","red", "purple"))+
   scale_shape_manual(values=c(15,16,17))+ 
-  geom_point(aes(group=Tree.ID), size=3, stroke=2)+
+  geom_point(aes(group=Tree_ID), size=3, stroke=2)+
   geom_smooth(method="lm",size=1, se=F,show.legend = FALSE, aes(size=1.4))+
   ylab("putrescine (nmol"~g^-1*" FW)")+xlab("Depth in crown (scaled)")+coord_flip()+
   facet_wrap(~Treatment, nrow=4,strip.position="top")+
@@ -351,10 +353,10 @@ f.put<-ggplot(samp, aes(x=scaled, y=Put, col=Treatment, shape=Stand, group=Tree.
   scale_x_reverse( lim=c(1,0), breaks=seq(0,1,.5))
 f.put
 
-f.spd<-ggplot(samp, aes(x=scaled, y=Spd, col=Treatment, shape=Stand, group=Tree.ID))+
+f.spd<-ggplot(samp, aes(x=scaled, y=Spd, col=Treatment, shape=Stand, group=Tree_ID))+
   scale_color_manual(values=c("black","blue","red", "purple"))+
   scale_shape_manual(values=c(15,16,17))+ 
-  geom_point(aes(group=Tree.ID), size=3, stroke=2)+
+  geom_point(aes(group=Tree_ID), size=3, stroke=2)+
   geom_smooth(method="lm",size=1, se=F,show.legend = FALSE, aes(size=1.4))+
   ylab("spermidine (nmol"~g^-1*" FW)")+xlab("")+coord_flip()+
   facet_wrap(~Treatment, nrow=4,strip.position="top")+
@@ -363,10 +365,10 @@ f.spd<-ggplot(samp, aes(x=scaled, y=Spd, col=Treatment, shape=Stand, group=Tree.
   scale_x_reverse( lim=c(1,0), breaks=seq(0,1,.5))
 f.spd
 
-f.spm<-ggplot(samp, aes(x=scaled, y=Spm, col=Treatment, shape=Stand, group=Tree.ID))+
+f.spm<-ggplot(samp, aes(x=scaled, y=Spm, col=Treatment, shape=Stand, group=Tree_ID))+
   scale_color_manual(values=c("black","blue","red", "purple"))+
   scale_shape_manual(values=c(15,16,17))+ 
-  geom_point(aes(group=Tree.ID), size=3, stroke=2)+
+  geom_point(aes(group=Tree_ID), size=3, stroke=2)+
   geom_smooth(method="lm",size=1, se=F,show.legend = FALSE, aes(size=1.4))+
   ylab("spermine (nmol"~g^-1*" FW)")+xlab("")+coord_flip()+
   facet_wrap(~Treatment, nrow=4,strip.position="top")+
