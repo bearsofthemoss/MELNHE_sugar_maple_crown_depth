@@ -5,7 +5,8 @@
 
 library(ggplot2)
 library(ggpubr)
-
+library(tidyr)
+library(patchwork)
 
 samp<-read.csv("Data/MELNHE_SugarMapleCrownDepth.csv", header=T)
 
@@ -13,6 +14,22 @@ samp<-read.csv("Data/MELNHE_SugarMapleCrownDepth.csv", header=T)
 samp$Treatment <- factor(samp$trmt,levels=c("Control","N treatment","P treatment","N+P treatment"))
 head(samp)
 str(samp)
+
+
+f1<-   samp[,c("scaled", "Stand","Tree_ID","Treatment","area_cm2","mass_g","SLA")]
+f1<-gather(f1, "var","value",5:7)
+
+head(f1)
+ggplot(f1, aes(x=scaled, y=value, col=Treatment, shape=Stand, group=Tree_ID))+
+  scale_color_manual(values=c("black","blue","red", "purple"))+
+  scale_shape_manual(values=c(15,16,17))+ 
+  geom_point(aes(group=Tree_ID), size=3, stroke=2)+
+  geom_smooth(method="lm",size=1, se=F,show.legend = FALSE, aes(size=1.4))+
+  labs(y = bquote('leaf area'~(cm^2)), x = bquote('Depth in crown '~(scaled)))+coord_flip()+
+  facet_wrap(~Treatment, nrow=4,strip.position="top")+
+  theme_bw()+theme(strip.background =element_rect(fill="white"))+theme(plot.title = element_text(hjust = 0.5))+  theme(text=element_text(size=16))+
+  theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())+
+  scale_x_reverse( lim=c(1,0), breaks=seq(0,1,.5))+facet_grid(Treatment~var, scales="free")
 
 
 ########################
@@ -29,7 +46,7 @@ f.area<-ggplot(samp, aes(x=scaled, y=area_cm2, col=Treatment, shape=Stand, group
   scale_x_reverse( lim=c(1,0), breaks=seq(0,1,.5))
 f.area
 
-f.mass<-ggplot(samp, aes(x=scaled, y=mass.g, col=Treatment, shape=Stand, group=Tree_ID))+
+f.mass<-ggplot(samp, aes(x=scaled, y=mass_g, col=Treatment, shape=Stand, group=Tree_ID))+
   scale_color_manual(values=c("black","blue","red", "purple"))+
   scale_shape_manual(values=c(15,16,17))+ 
   geom_point(aes(group=Tree_ID), size=3, stroke=2)+
@@ -56,6 +73,8 @@ f.sla
 ## FIGURE 1!
 f1<-ggarrange(f.area, f.mass, f.sla, nrow=1, ncol=3, common.legend=T, legend="bottom")
 f1
+
+
 
 # For pdf.
 #dpi=300    #pixels per square inch

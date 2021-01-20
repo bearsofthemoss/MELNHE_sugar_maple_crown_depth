@@ -6,12 +6,15 @@
 samp<-read.csv("Data/MELNHE_SugarMapleCrownDepth.csv", header=T)
 head(samp)
 
+summary(samp$Chl_A)
+
 samp$Treatment <- factor(samp$trmt,levels=c("Control","N treatment","P treatment","N+P treatment"))
 samp$trmt <- factor(samp$trmt,levels=c("Control","N treatment","P treatment","N+P treatment"))
 samp$Tree_ID<-as.numeric(samp$Tree_ID)
 
 
 tree<-read.csv("Data/Tree_info_MELNHE_sugar_maple_crown.csv")
+tree
 tree<-tree[, c(1:6)]
 
 
@@ -67,7 +70,9 @@ abcd<- as.data.frame(rbindlist(output.mass))
 abcd
 colnames(abcd)<-c("Tree_ID","Stand","t.height.m","trmt","Ntrmt","Ptrmt","intercept","slope")
 abcd$trmt<-factor(abcd$trmt, levels=c("Con","N","P","NP"))
+
 abcd$var.names<-rep(names(samp)[c(11:53)], each=12)
+
 
 
 ## gather the slope and intercept column into a longer dataframe
@@ -129,23 +134,46 @@ dim(sm.ave)
 #write.csv(sm.ave, "mass_scaled_average_5_8_20.csv")
 #write.csv(sm.int, "mass_scaled_intercepts_3_3_20.csv")
 ###########################################################
+#
+
+#Example comparison for three ways to do the analysis.
+# model m1 is a linear model with Stand in the model
+m1<-lm(Al~ Stand+Ntrmt*Ptrmt, data=sm.ave)
+summary(m1)
+anova(m1)
+
+# model m2 is made using the package lme4
+# m2 is a mixed effect model Fixed is N*P, random effect is Stand
+library(lme4)
+library(lmerTest)
+m2<-lmer(Al~ Ntrmt*Ptrmt+(1|Stand), data=sm.int)
+summary(m2)
+anova(m2)
+
+# model m3 is made using the package nlme
+# m3 is a mixed effect model Fixed is N*P, random effect is Stand
+library(nlme)
+m3 <- lme(Al ~ Ntrmt*Ptrmt, random=~1|Stand, data=sm.ave)
+summary(m3)
+anova(m3)
 
 
 
+###############################################
 ### Functions for statistical anova
 aov.slope <- function(y, Stand, Ntrmt, Ptrmt){
   #1 aov for slope
-  slope1<-anova(lm(y ~ Stand +Ntrmt*Ptrmt))
+  slope1<-anova(lmer(y~ Ntrmt*Ptrmt+(1|Stand)))
   return(slope1)}
 
 aov.intc <- function(y, Stand, Ntrmt, Ptrmt){
   #1 aov for intercept
-  intc1<-anova(lm(y ~ Stand +Ntrmt*Ptrmt))
+  intc1<-anova(lmer(y~ Ntrmt*Ptrmt+(1|Stand)))
   return(intc1)}
 
 aov.ave <- function(y, Stand, Ntrmt, Ptrmt){
   #1 aov for average
-  ave1<-anova(lm(y ~ Stand +Ntrmt*Ptrmt))
+  ave1<-anova(lmer(y~ Ntrmt*Ptrmt+(1|Stand)))
   return(ave1)}
 
 
@@ -179,80 +207,87 @@ for(i in c(8:50)){
   Ptrmt=sm.ave$Ptrmt
   output.mass.ave[[i-7]] <- aov.ave(y, Stand, Ntrmt, Ptrmt)}
 
+output.mass.ave
 
 
-
-
+anova(m2)
 # INTERCEPT
 d.int<- as.data.frame(rbindlist(output.intc.mass))
-d.int$Source<-rep(c("Stand","N","P","N*P","Residuals"))
-d.int$resp.var<-rep(names(sm.int)[c(8:50)], each=5)
+d.int$Source<-rep(c("N","P","N*P"))
+d.int$variable<-rep(names(sm.int)[c(8:50)], each=3)
 d.int$type<-c("Intercept")
-d.int<-d.int[ ,c(7,8,6,1,2,3,4,5)]
+d.int<-d.int[ ,c(9,7,8,1,2,3,4,5,6)]
 
 # SLOPE
 d.slo<- as.data.frame(rbindlist(output.slo.mass))
-d.slo$Source<-rep(c("Stand","N","P","N*P","Residuals"))
-d.slo$resp.var<-rep(names(sm.slo)[c(8:50)], each=5)
+d.slo$Source<-rep(c("N","P","N*P"))
+d.slo$variable<-rep(names(sm.slo)[c(8:50)], each=3)
 d.slo$type<-c("Slope")
-d.slo<-d.slo[ ,c(7,8,6,1,2,3,4,5)]
+d.slo<-d.slo[ ,c(9,7,8,1,2,3,4,5,6)]
 
 
 # AVERAGE
 d.ave<- as.data.frame(rbindlist(output.mass.ave))
-d.ave$Source<-rep(c("Stand","N","P","N*P","Residuals"))
-d.ave$resp.var<-rep(names(sm.ave)[c(8:50)], each=5)
+d.ave$Source<-rep(c("N","P","N*P"))
+d.ave$variable<-rep(names(sm.ave)[c(8:50)], each=3)
 d.ave$type<-c("Average")
-d.ave<-d.ave[ ,c(7,8,6,1,2,3,4,5)]
+d.ave<-d.ave[ ,c(9,7,8,1,2,3,4,5,6)]
 
 dim(d.slo) #215 rows, 8 col
 dim(d.ave)
 dim(d.int)
 
+
 pism<-rbind( d.slo , d.int, d.ave)
+
 pism
 ## add leaf characteristic
-pism$leaf.char[pism$resp.var=="area_cm2"]<-"Physical characteristics"
-pism$leaf.char[pism$resp.var=="mass_g"]<-"Physical characteristics"
-pism$leaf.char[pism$resp.var=="SLA"]<-"Physical characteristics"
+pism$leaf.char[pism$variable=="area_cm2"]<-"Physical characteristics"
+pism$leaf.char[pism$variable=="mass_g"]<-"Physical characteristics"
+pism$leaf.char[pism$variable=="SLA"]<-"Physical characteristics"
 
-pism$leaf.char[pism$resp.var=="total_chl"]<-"Photosynthetic pigments"
-pism$leaf.char[pism$resp.var=="carot"]<-"Photosynthetic pigments"
-pism$leaf.char[pism$resp.var=="Chl_R"]<-"Photosynthetic pigments"
+pism$leaf.char[pism$variable=="total_chl"]<-"Photosynthetic pigments"
+pism$leaf.char[pism$variable=="carot"]<-"Photosynthetic pigments"
+pism$leaf.char[pism$variable=="Chl_R"]<-"Photosynthetic pigments"
 
-pism$leaf.char[pism$resp.var=="Ala"]<-"Amino acids"
-pism$leaf.char[pism$resp.var=="GABA"]<-"Amino acids"
-pism$leaf.char[pism$resp.var=="Glu"]<-"Amino acids"
-pism$leaf.char[pism$resp.var=="Val"]<-"Amino acids"
+pism$leaf.char[pism$variable=="Ala"]<-"Amino acids"
+pism$leaf.char[pism$variable=="GABA"]<-"Amino acids"
+pism$leaf.char[pism$variable=="Glu"]<-"Amino acids"
+pism$leaf.char[pism$variable=="Val"]<-"Amino acids"
 
-pism$leaf.char[pism$resp.var=="Put"]<-"Polyamines"
-pism$leaf.char[pism$resp.var=="Spd"]<-"Polyamines"
-pism$leaf.char[pism$resp.var=="Spm"]<-"Polyamines"
+pism$leaf.char[pism$variable=="Put"]<-"Polyamines"
+pism$leaf.char[pism$variable=="Spd"]<-"Polyamines"
+pism$leaf.char[pism$variable=="Spm"]<-"Polyamines"
 
-pism$leaf.char[pism$resp.var=="C"]<-"Elements"
-pism$leaf.char[pism$resp.var=="Mg"]<-"Elements"
-pism$leaf.char[pism$resp.var=="Ca"]<-"Elements"
-pism$leaf.char[pism$resp.var=="Al"]<-"Elements"
-pism$leaf.char[pism$resp.var=="B"]<-"Elements"
-pism$leaf.char[pism$resp.var=="Mn"]<-"Elements"
-pism$leaf.char[pism$resp.var=="N"]<-"Elements"
-pism$leaf.char[pism$resp.var=="N_P"]<-"Elements"
-pism$leaf.char[pism$resp.var=="P"]<-"Elements"
-pism$leaf.char[pism$resp.var=="S"]<-"Elements"
-pism$leaf.char[pism$resp.var=="Zn"]<-"Elements"
+pism$leaf.char[pism$variable=="C"]<-"Elements"
+pism$leaf.char[pism$variable=="Mg"]<-"Elements"
+pism$leaf.char[pism$variable=="Ca"]<-"Elements"
+pism$leaf.char[pism$variable=="Al"]<-"Elements"
+pism$leaf.char[pism$variable=="B"]<-"Elements"
+pism$leaf.char[pism$variable=="Mn"]<-"Elements"
+pism$leaf.char[pism$variable=="N"]<-"Elements"
+pism$leaf.char[pism$variable=="N_P"]<-"Elements"
+pism$leaf.char[pism$variable=="P"]<-"Elements"
+pism$leaf.char[pism$variable=="S"]<-"Elements"
+pism$leaf.char[pism$variable=="Zn"]<-"Elements"
 
-
-
-pval<-spread(pism[ ,c("leaf.char","resp.var","Source","type","Pr(>F)")], Source,'Pr(>F)')
+head(pism)
+#write.csv(pism, file="supplemental_table_2.csv")
+pval<-spread(pism[ ,c("leaf.char","variable","Source","type","Pr(>F)")], Source,'Pr(>F)')
 head(pval)
 
 pval<-pval[ ,c(1,3,2,4,6,5)]
-
 
 fp<-cbind(pval[pval$type=="Slope",],pval[pval$type=="Intercept",],pval[pval$type=="Average",] )
 head(fp)
 fp<-fp[ ,c(1,3,2,4,5,6,8,10,11,12,14,16,17,18)]
 head(fp)
+
+
+
+t.test(sm.slo$Chl_A)
+names(sm.slo)
+ggplot(sm.slo, aes(x=trmt, y=Chl_B))+geom_point()
 
 ####################################
 ## overall slope test
@@ -262,19 +297,14 @@ slope.zero <- function(y){
   mean<-a$estimate[1]
   low.cf<-a$conf.int[1]
   upp.cf<-a$conf.int[2]
-  resp.var<-paste(colnames(sm.slo[i]))
-  e<-cbind(resp.var, p.val, mean, low.cf, upp.cf)
+  variable<-paste(colnames(sm.slo[i]))
+  e<-cbind(variable, p.val, mean, low.cf, upp.cf)
   return(e)}
 
-
-names(sm.slo)
 out.t<-list()
-for(i in c(9:51)){ 
+for(i in c(8:50)){ 
   y = sm.slo[,i]
-  out.t[[i-8]] <- slope.zero(y)}
-
-head(out.t)
-## ## now a funtion to write over it
+  out.t[[i-7]] <- slope.zero(y)}
 
 load <- data.frame()
 for(i in 1:length(out.t)){
@@ -282,13 +312,13 @@ for(i in 1:length(out.t)){
   x <- data.frame(y=as.matrix(x))
   load <- rbind(load, x)}
 
-head(load)
+head(load,40)
 
 head(fp)
 
 
-fp$mean.slope<-load$y.mean[match(fp$resp.var, load$y.resp.var)]
-fp$slope.pval<-load$y.p.val[match(fp$resp.var, load$y.resp.var)]
+fp$mean.slope<-load$y.mean[match(fp$variable, load$y.variable)]
+fp$slope.pval<-load$y.p.val[match(fp$variable, load$y.variable)]
 
 head(fp)
 
@@ -301,7 +331,7 @@ names(fp)
 ## order fp by the order of variables. 
 
 order<-seq(1:43)
-name<-c("mass.g",	"area.cm2"	,"SLA"	,"protein","total.chl",	"carot"	, "Chl.R"	,"C","N","P","N_P",	"Ca","Mg","Mn","Al",	"B",	"Zn",	"S"	,	"Ala",	"GABA",	"Glu",	"Val",	"Put",	"Spd"	,"Spm"	,"Chl.A",	"Chl.B"	,"Fe"	,"K"	,"Sr",	"Arg",	"Asp",	"Ile",	"Leu"	,"Lys",	"Pro"		,"s.Al"	,"s.Ca"	,"s.K",	"s.Mn",	"s.P"	,"s.Mg"	,"s.Zn")
+name<-c("mass_g",	"area_cm2"	,"SLA"	,"protein","total_chl",	"carot"	, "Chl_R"	,"C","N","P","N_P",	"Ca","Mg","Mn","Al",	"B",	"Zn",	"S"	,	"Ala",	"GABA",	"Glu",	"Val",	"Put",	"Spd"	,"Spm"	,"Chl_A",	"Chl_B"	,"Fe"	,"K"	,"Sr",	"Arg",	"Asp",	"Ile",	"Leu"	,"Lys",	"Pro"		,"s_Al"	,"s_Ca"	,"s_K",	"s_Mn",	"s_P"	,"s_Mg"	,"s_Zn")
 length(name)
 vord<-as.data.frame(order, name)
 vord$name<-rownames(vord)
@@ -310,10 +340,10 @@ vord$order<-as.numeric(vord$order)
 str(vord)
 vord
 
-fp$vord<-vord$order [match(fp$resp.var, vord$name)]
+fp$vord<-vord$order [match(fp$variable, vord$name)]
 fp<-fp[order(fp$vord),]
 head(fp)
-#write.csv(fp, file="thesis_p_values_5_14_2020.csv")
+write.csv(fp, file="thesis_p_values_1_9_2020.csv")
 
 
 
@@ -323,38 +353,111 @@ head(fp)
 # look here to normalize its slope by the IQR
 sm.slo
 head(sm.slo)
+names(samp)
+dim(samp)
 ###  get IQR for each tree
+
 sm.iqr<-aggregate(samp[ ,c(11:53)], list(Tree_ID=samp$Tree_ID), FUN = IQR, na.rm=T)
+head(sm.iqr)
+
+IQR(samp[,"Chl_R"])
+IQR(samp[samp$Tree_ID=="30","Chl_R"])
+IQR(samp[samp$Tree_ID=="79","Chl_R"])
+
+
 # gather sm.slo and sm.iqr
+dim(sm.iqr)
+dim(sm.slo)
 giqr<-gather(sm.iqr, "variable","value",2:44)
-gslo<-gather(sm.slo, "variable","value",9:51)
+head(giqr)
+dim(giqr)
+names(sm.slo)
+gslo<-gather(sm.slo, "variable","value",8:50)
+dim(gslo)
 #formatting
 
-gslo$slope<-gslo$value
+
+gslo$slope<-as.numeric(gslo$value)
 names(gslo)
 gslo
-f2<-gslo[ ,c(1,2,5,9,11)]
+f2<-gslo[ ,c(1,2,4,8,9,10)]
 giqr$unique<-paste(giqr$Tree_ID, giqr$variable)
 f2$unique<-paste(f2$Tree_ID, f2$variable)
+
+## Make giqr half as long?
+length(giqr$unique)
+length(f2$unique)
+
+
+
+
+head(giqr)
+giqr$variable<-factor(giqr$variable, levels=c("mass_g", "area_cm2","SLA","C","N","P","Ca","Mg","Mn","Al","B","Zn","N_P","total_chl","carot","Chl_R","Ala","GABA","Glu","Val","protein","Put","Spm","Spd"))
+giqr<-na.omit(giqr)
+
+## Now bring in iqr that they are the same length
 f2$iqr<-giqr$value[match(f2$unique, giqr$unique)]
+
 f2$normalized<-f2$slope/f2$iqr
 
+
+aggregate(f2$slope, by=list(f2$variable), FUN="mean", na.rm=T)
+aggregate(f2$iqr, by=list(f2$variable), FUN="mean", na.rm=T)
+aggregate(f2$normalized, by=list(f2$variable), FUN="mean", na.rm=T)
+
 head(f2)
-
-
+str(f2)
+f2$Group<-""
+f2$variable<-as.character(f2$variable)
 #write.csv(f2, file="iqr_slope.csv")
 ######## Figure 2!
-f2$variable<-factor(f2$variable, levels=c("leaf mass", "leaf area","specific leaf area","C","N","P","Ca","Mg","Mn","Al","B","Zn","N:P","chlorophyll","carotenoids","chlorophyll a:b","alanine","GABA","glutamic acid","valine","soluble protein","putrescine","spermine","spermidine"))
+## add leaf characteristic
+table(f2$variable)
+f2$Group[f2$variable=="area_cm2"]<-"Physical characteristics"
+f2$Group[f2$variable=="mass_g"]<-"Physical characteristics"
+f2$Group[f2$variable=="SLA"]<-"Physical characteristics"
 
-f2$trmt<-factor(f2$trmt, levels=c("Control","N treatment","P treatment","N+P treatment"))
-f2$Group<-factor(f2$Group, levels=c("physical","elements","pigments","amino acids","polyamines"))
+f2$Group[f2$variable=="total_chl"]<-"Photosynthetic pigments"
+f2$Group[f2$variable=="carot"]<-"Photosynthetic pigments"
+f2$Group[f2$variable=="Chl_R"]<-"Photosynthetic pigments"
+
+f2$Group[f2$variable=="Ala"]<-"Amino acids"
+f2$Group[f2$variable=="GABA"]<-"Amino acids"
+f2$Group[f2$variable=="Glu"]<-"Amino acids"
+f2$Group[f2$variable=="Val"]<-"Amino acids"
+
+f2$Group[f2$variable=="Put"]<-"Polyamines"
+f2$Group[f2$variable=="Spd"]<-"Polyamines"
+f2$Group[f2$variable=="Spm"]<-"Polyamines"
+
+f2$Group[f2$variable=="C"]<-"Elements"
+f2$Group[f2$variable=="Mg"]<-"Elements"
+f2$Group[f2$variable=="Ca"]<-"Elements"
+f2$Group[f2$variable=="Al"]<-"Elements"
+f2$Group[f2$variable=="B"]<-"Elements"
+f2$Group[f2$variable=="Mn"]<-"Elements"
+f2$Group[f2$variable=="N"]<-"Elements"
+f2$Group[f2$variable=="N_P"]<-"Elements"
+f2$Group[f2$variable=="P"]<-"Elements"
+f2$Group[f2$variable=="S"]<-"Elements"
+f2$Group[f2$variable=="Zn"]<-"Elements"
+
+table(f2$variable, f2$Group)
+
+f2$variable<-factor(f2$variable, levels=c("mass_g", "area_cm2","SLA","C","N","P","Ca","Mg","Mn","Al","B","Zn","N_P","total_chl","carot","Chl_R","Ala","GABA","Glu","Val","protein","Put","Spm","Spd"))
+
+table(f2$trmt)
+f2$trmt<-factor(f2$trmt, levels=c("Con","N","P","NP"))
+table(f2$Group)
+f2$Group<-factor(f2$Group, levels=c("Physical characteristics","Elements","Photosynthetic pigments","Amino acids","Polyamines"))
 
 # 
-
+head(f2)
 table(f2$variable)
 
 f2<-na.omit(f2)
-
+head(f2)
+library(ggplot2)
 m<-ggplot(f2, aes(x=variable,y=normalized, color=trmt, shape=Group))+
   scale_shape_manual(values=c(0,1,2,5,7))+xlab("")+coord_flip()+
   scale_color_manual(values=c("black","blue","red", "purple"))+
@@ -363,8 +466,51 @@ m<-ggplot(f2, aes(x=variable,y=normalized, color=trmt, shape=Group))+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
         panel.background = element_blank(), axis.line = element_line(colour = "black"))+
   theme(legend.position="bottom",legend.box="vertical", legend.margin=margin())+theme(plot.title = element_text(hjust = 0.5))+
-  theme(text=element_text(size=24))+ylim(-23, 23)+
+  theme(text=element_text(size=24))+
   guides(colour = guide_legend(override.aes = list(size=5)), shape = guide_legend(override.aes = list(size=5)))+
   theme(legend.title = element_blank())+geom_vline(xintercept=3.5)+geom_vline(xintercept=8.5)+
   geom_vline(xintercept=11.5)+geom_vline(xintercept=21.5)+scale_x_discrete(limits = rev(levels(f2$variable)))
 m
+
+
+avg.slo<-aggregate(f2$slope,by=list(variable=f2$variable, Group=f2$Group), FUN="mean", na.rm=T)
+avg.iqr<-aggregate(f2$iqr,by=list(variable=f2$variable, Group=f2$Group), FUN="mean", na.rm=T)
+
+head(avg.slo)
+head(avg.iqr)
+
+avg.slo$norm<-avg.slo$x/avg.iqr$x
+g2<-ggplot(avg, aes(x=reorder(variable, x),y=x,col=Group, shape=Group))+
+  scale_shape_manual(values=c(0,1,2,5,7))+xlab("")+coord_flip()+
+  geom_point(aes(size=.8), stroke=2)+theme_bw()+ylab("Average slope value")+
+  theme(text=element_text(size=20))+guides(size=FALSE)+geom_hline(yintercept=0, linetype="dashed")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black"))+
+  theme(legend.position="right",legend.box="vertical", legend.margin=margin())+theme(plot.title = element_text(hjust = 0.5))+
+  theme(text=element_text(size=24))+
+  guides(colour = guide_legend(override.aes = list(size=5)), shape = guide_legend(override.aes = list(size=5)))+
+  theme(legend.title = element_blank())
+
+g3<-ggplot(avg, aes(x=reorder(variable, x),y=x,col=Group, shape=Group))+
+  scale_shape_manual(values=c(0,1,2,5,7))+xlab("")+coord_flip()+
+  geom_point(aes(size=.8), stroke=2)+theme_bw()+ylab("Average IQR value")+
+  theme(text=element_text(size=20))+guides(size=FALSE)+geom_hline(yintercept=0, linetype="dashed")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black"))+
+  theme(legend.position="right",legend.box="vertical", legend.margin=margin())+theme(plot.title = element_text(hjust = 0.5))+
+  theme(text=element_text(size=24))+
+  guides(colour = guide_legend(override.aes = list(size=5)), shape = guide_legend(override.aes = list(size=5)))+
+  theme(legend.title = element_blank())
+g3
+
+g4<-ggplot(avg.slo, aes(x=reorder(variable, norm),y=norm,col=Group, shape=Group))+
+  scale_shape_manual(values=c(0,1,2,5,7))+xlab("")+coord_flip()+
+  geom_point(aes(size=.8), stroke=2)+theme_bw()+ylab("Relative change through the crown")+
+  theme(text=element_text(size=20))+guides(size=FALSE)+geom_hline(yintercept=0, linetype="dashed")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black"))+
+  theme(legend.position="right",legend.box="vertical", legend.margin=margin())+theme(plot.title = element_text(hjust = 0.5))+
+  theme(text=element_text(size=24))+
+  guides(colour = guide_legend(override.aes = list(size=5)), shape = guide_legend(override.aes = list(size=5)))+
+  theme(legend.title = element_blank())
+g4
