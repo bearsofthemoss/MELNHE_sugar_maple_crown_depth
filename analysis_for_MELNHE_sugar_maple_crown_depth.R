@@ -6,6 +6,10 @@
 samp<-read.csv("Data/MELNHE_SugarMapleCrownDepth.csv", header=T)
 head(samp)
 
+names(samp)
+
+samp<-samp[,c(14:27)]/samp$SLA
+
 summary(samp$Chl_A)
 
 samp$Treatment <- factor(samp$trmt,levels=c("Control","N treatment","P treatment","N+P treatment"))
@@ -343,7 +347,7 @@ vord
 fp$vord<-vord$order [match(fp$variable, vord$name)]
 fp<-fp[order(fp$vord),]
 head(fp)
-write.csv(fp, file="thesis_p_values_1_9_2020.csv")
+write.csv(fp, file="thesis_p_values_1_26_2020.csv")
 
 
 
