@@ -77,10 +77,10 @@ f1
 
 
 # For pdf.
-#dpi=300    #pixels per square inch
-#tiff("thesis_fig_1.tif", width=12*dpi, height=8*dpi, res=dpi)
-#f1
-#dev.off()
+dpi=300    #pixels per square inch
+tiff("05_03_thesis_fig_2.tif", width=12*dpi, height=8*dpi, res=dpi)
+f1
+dev.off()
 
 
 
@@ -139,10 +139,10 @@ f3<-ggarrange(f.C, f.N, f.P,f.NP , nrow=1, ncol=4, common.legend = T, legend="bo
 f3
 
 # For pdf
-#dpi=300    #pixels per square inch
-#tiff("thesis_fig_3.tif", width=12*dpi, height=8*dpi, res=dpi)
-#f3
-#dev.off()
+dpi=300    #pixels per square inch
+tiff("05_03_thesis_fig_3.tif", width=12*dpi, height=8*dpi, res=dpi)
+f3
+dev.off()
 
 
 ## Figure 4!
@@ -226,16 +226,16 @@ f.zn
 f4<-ggarrange(f.ca, f.mg, f.mn, f.al, f.b, f.zn, nrow=1, ncol=6, common.legend = T, legend="bottom")
 f4
 
-#dpi=300    #pixels per square inch
-#tiff("thesis_fig_4.tif", width=12*dpi, height=8*dpi, res=dpi)
-#f4
-#dev.off()
+dpi=300    #pixels per square inch
+tiff("05_03_thesis_fig_4.tif", width=12*dpi, height=8*dpi, res=dpi)
+f4
+dev.off()
 
 
 # FIGURE 5 BELOW!
 
 
-f.chl<-ggplot(samp, aes(x=scaled, y=total.chl, col=Treatment, shape=Stand, group=Tree_ID))+
+f.chl<-ggplot(samp, aes(x=scaled, y=total_chl, col=Treatment, shape=Stand, group=Tree_ID))+
   scale_color_manual(values=c("black","blue","red", "purple"))+
   scale_shape_manual(values=c(15,16,17))+ 
   geom_point(aes(group=Tree_ID), size=3, stroke=2)+
@@ -247,7 +247,7 @@ f.chl<-ggplot(samp, aes(x=scaled, y=total.chl, col=Treatment, shape=Stand, group
   scale_x_reverse( lim=c(1,0), breaks=seq(0,1,.5))
 f.chl
 
-f.chl.r<-ggplot(samp, aes(x=scaled, y=Chl.R, col=Treatment, shape=Stand, group=Tree_ID))+
+f.chl.r<-ggplot(samp, aes(x=scaled, y=Chl_R, col=Treatment, shape=Stand, group=Tree_ID))+
   scale_color_manual(values=c("black","blue","red", "purple"))+
   scale_shape_manual(values=c(15,16,17))+ 
   geom_point(aes(group=Tree_ID), size=3, stroke=2)+
@@ -278,10 +278,10 @@ f5<-ggarrange(f.chl,f.carot,f.chl.r, nrow=1, ncol=3, common.legend=T, legend="bo
 f5
 
 # for pdf.
-#dpi=300    #pixels per square inch
-#tiff("thesis_fig_5.tif", width=12*dpi, height=8*dpi, res=dpi)
-#f5
-#dev.off()
+dpi=300    #pixels per square inch
+tiff("05_03_thesis_fig_5.tif", width=12*dpi, height=8*dpi, res=dpi)
+f5
+dev.off()
 
 
 ## Figure 6! amino acids
@@ -350,11 +350,12 @@ f.pro
 f6<-ggarrange(f.ala, f.glu, f.val, f.gaba, f.pro, nrow=1, ncol=5, common.legend=T, legend="bottom")
 f6
 
+
 ## FIGURE 6! pdf.
-#dpi=300    #pixels per square inch
-#tiff("thesis_fig_6.tif", width=12*dpi, height=8*dpi, res=dpi)
-#f6
-#dev.off()
+dpi=300    #pixels per square inch
+tiff("05_03_thesis_fig_6.tif", width=12*dpi, height=8*dpi, res=dpi)
+f6
+dev.off()
 
 
 
@@ -401,7 +402,8 @@ f7
 
 ## FIGURE 7!
 # for pdf.
-#f7
-#dpi=300
-#tiff("thesis_fig_7.tif", width=12*dpi, height=8*dpi, res=dpi)
-#dev.off()
+dpi=300
+tiff("05_03_thesis_fig_7.tif", width=12*dpi, height=8*dpi, res=dpi)
+f7
+
+dev.off()

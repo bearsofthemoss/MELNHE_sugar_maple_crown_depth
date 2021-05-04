@@ -2,15 +2,36 @@
 ## Alex Young   4/7/2020
 ## alexyoung.116@gmail.com
 
-
-samp<-read.csv("Data/MELNHE_SugarMapleCrownDepth.csv", header=T)
+#samp<-read.csv("Data/MELNHE_SugarMapleCrownDepth.csv")
+samp<-read.csv("better_melnhe_sugar_maple_crown_depth.csv", header=T)
+#samp$br<-paste(samp$Tree_ID, samp$dfromtop)
 head(samp)
 
-names(samp)
+# second<-read.csv("Data/second_collection_MELNHE_SugarMapleCrownDepth.csv")
+# second$br<-paste(second$Tree.ID, second$dfromtop)
+# 
+# second$moisture<-(second$wetmass2_g-second$mass2_g)/second$wetmass2_g
+# head(second)
+# 
+# samp$moisture<-second$moisture[match(samp$br, second$br)]
+#write.csv(samp[,c(1:53,55)], file="better_melnhe_sugar_maple_crown_depth.csv")
 
-samp<-samp[,c(14:27)]/samp$SLA
+head(samp)
 
-summary(samp$Chl_A)
+library(ggplot2)
+
+ggplot(samp, aes(x=scaled, col=Treatment,y=moisture))+geom_point()+
+  scale_color_manual(values=c("black","blue","red","purple"))+
+  facet_wrap(~Stand)+coord_flip()+
+  geom_smooth(method="lm")+
+  labs(y = bquote('Moisture content (%)'), x = bquote('Depth in crown '~(scaled)))+
+  scale_x_reverse( lim=c(1,0), breaks=seq(0,1,.5))+
+  theme_classic()+ggtitle("Dry to wet mass comparison for second collection of leaves")
+
+
+
+# IF you want to assess the traits per unit Area rather than Mass
+#samp<-samp[,c(14:27)]/samp$SLA
 
 samp$Treatment <- factor(samp$trmt,levels=c("Control","N treatment","P treatment","N+P treatment"))
 samp$trmt <- factor(samp$trmt,levels=c("Control","N treatment","P treatment","N+P treatment"))
@@ -52,7 +73,7 @@ lin <- function(y30,y79,y128,y168,y249,y250, y320, y480,y571,y609,y928, y1297){
 names(samp)
 dim(samp)
 output.mass<- list() # create an empty list to catch the output
-for(i in c(11:53)){ 
+for(i in c(12:55)){ 
   y30 = samp[samp$Tree_ID=="30",i]
   y79 = samp[samp$Tree_ID=="79",i]
   y128 = samp[samp$Tree_ID=="128",i]
@@ -65,7 +86,7 @@ for(i in c(11:53)){
   y609 = samp[samp$Tree_ID=="609",i]
   y928 = samp[samp$Tree_ID=="928",i]
   y1297 = samp[samp$Tree_ID=="1297",i]
-  output.mass[[i-10]] <- lin(y30,y79,y128,y168,y249,y250, y320, y480,y571,y609,y928, y1297)
+  output.mass[[i-11]] <- lin(y30,y79,y128,y168,y249,y250, y320, y480,y571,y609,y928, y1297)
 }
 
 
@@ -75,7 +96,11 @@ abcd
 colnames(abcd)<-c("Tree_ID","Stand","t.height.m","trmt","Ntrmt","Ptrmt","intercept","slope")
 abcd$trmt<-factor(abcd$trmt, levels=c("Con","N","P","NP"))
 
-abcd$var.names<-rep(names(samp)[c(11:53)], each=12)
+head(abcd)
+
+names(samp)
+
+abcd$var.names<-rep(names(samp)[c(12:55)], each=12)
 
 
 
@@ -93,7 +118,10 @@ sm.slo<-sm.mass[sm.mass$var=="slope",]
 # make intercept dataframe
 sm.int<-sm.mass[sm.mass$var=="intercept",]
 # make average dataframe 
-sm.a<-aggregate(samp[ ,c(11:53)], list(Tree_ID=samp$Tree_ID), FUN = mean, na.rm=T)
+sm.a<-aggregate(samp[ ,c(12:55)], list(Tree_ID=samp$Tree_ID), FUN = mean, na.rm=T)
+
+
+
 
 ## add in tree information 
 sm.a$Stand<-tree$Stand[match(sm.a$Tree_ID,tree$Tree_ID)]
@@ -103,15 +131,22 @@ sm.a$trmt<-tree$trmt[match(sm.a$Tree_ID,tree$Tree_ID)]
 sm.a$Ntrmt<-tree$Ntrmt[match(sm.a$Tree_ID,tree$Tree_ID)]
 sm.a$Ptrmt<-tree$Ptrmt[match(sm.a$Tree_ID,tree$Tree_ID)]
 sm.a$var<-c("ave")
+
+
 # re-order sm.a to be consistent with sm.int and sm.slo
 dim(sm.a)
+dim(sm.a)
 names(sm.a)
+names(sm.int)
 
-sm.a.order<-sm.a[ ,c(1, 45:50,2:44)]
+
+sm.a.order<-sm.a[ ,c(1, 46:51,2:45)]
 names(sm.a.order)
+dim(sm.a.order)
 ## quick spread and gather to alphabatize the var names
 names(sm.a.order)
-spra<-gather(sm.a.order, "var.names","value",8:50) #
+dim(sm.a.order)
+spra<-gather(sm.a.order, "var.names","value",8:51) #
 sm.ave<-spread(spra, var.names , value)
 
 names(sm.ave)
@@ -119,38 +154,59 @@ names(sm.ave)
 sm.int$trmt<-factor(sm.int$trmt, levels=c("Con","N","P","NP"))
 sm.ave$trmt<-factor(sm.ave$trmt, levels=c("Con","N","P","NP"))
 
+##################################################################################
+
+ggplot(sm.int, aes(x=trmt, col=trmt,y=moisture))+geom_point()+
+  scale_color_manual(values=c("black","blue","red","purple"))+
+  facet_wrap(~Stand)+
+  labs(y = bquote('Moisture content (%)'), x = bquote('Depth in crown '~(scaled)))+
+#  scale_x_reverse( lim=c(1,0), breaks=seq(0,1,.5))+
+  theme_classic()+ggtitle("Moisture content for second collection of leaves")
+
+
+
 
 
 ############################################################################################
 ## check point!
 # spot check
-head(sm.int)
 head(sm.int[ ,1:10])
 head(sm.slo[ ,1:10])
 head(sm.ave[ ,1:10])
-dim(sm.slo) # Each should have 12 rows, 50 columns
+dim(sm.slo) # Each should have 12 rows, 51 columns
 dim(sm.int)
 dim(sm.ave)
 
-###########
-###  write out to .csv for easier graphing or inspection
-#write.csv(sm.slo, "mass_scaled_slopes_3_3_20.csv")
-#write.csv(sm.ave, "mass_scaled_average_5_8_20.csv")
-#write.csv(sm.int, "mass_scaled_intercepts_3_3_20.csv")
-###########################################################
+# ###########
+# ###  write out to .csv for easier graphing or inspection
+# write.csv(sm.slo, "mass_scaled_slopes_4_15_21.csv")
+# write.csv(sm.ave, "mass_scaled_average_4_15_21.csv")
+# write.csv(sm.int, "mass_scaled_intercepts_4_15_21.csv")
+# ###########################################################
 #
 
 #Example comparison for three ways to do the analysis.
 # model m1 is a linear model with Stand in the model
-m1<-lm(Al~ Stand+Ntrmt*Ptrmt, data=sm.ave)
-summary(m1)
-anova(m1)
+
+
+
+intercept<-lm(moisture~ Stand+Ntrmt*Ptrmt, data=sm.int)
+anova(intercept)
+
+slope<-lm(moisture~ Stand+Ntrmt*Ptrmt, data=sm.slo)
+anova(slope)
+
+average<-lm(moisture~ Stand+Ntrmt*Ptrmt, data=sm.ave)
+anova(average)
+
+
+
 
 # model m2 is made using the package lme4
 # m2 is a mixed effect model Fixed is N*P, random effect is Stand
 library(lme4)
 library(lmerTest)
-m2<-lmer(Al~ Ntrmt*Ptrmt+(1|Stand), data=sm.int)
+m2<-lmer(Al~ Ntrmt*Ptrmt+(1|Stand), data=sm.ave)
 summary(m2)
 anova(m2)
 
@@ -181,11 +237,12 @@ aov.ave <- function(y, Stand, Ntrmt, Ptrmt){
   return(ave1)}
 
 
+names(sm.slo)
 
 #####################################################
 ##3 creat output of functions
 output.slo.mass<-list()
-for(i in c(8:50)){ 
+for(i in c(8:51)){ 
   y = sm.slo[,i]
   Stand= sm.slo$Stand
   Ntrmt=sm.slo$Ntrmt
@@ -194,7 +251,7 @@ for(i in c(8:50)){
 ##3 c
 output.intc.mass<-list()
 names(sm.int)
-for(i in c(8:50)){ 
+for(i in c(8:51)){ 
   y = sm.int[,i]
   Stand= sm.int$Stand
   Ntrmt=sm.int$Ntrmt
@@ -204,28 +261,26 @@ for(i in c(8:50)){
 
 names(sm.ave)
 output.mass.ave<-list()
-for(i in c(8:50)){ 
+for(i in c(8:51)){ 
   y = sm.ave[,i]
   Stand= sm.ave$Stand
   Ntrmt=sm.ave$Ntrmt
   Ptrmt=sm.ave$Ptrmt
   output.mass.ave[[i-7]] <- aov.ave(y, Stand, Ntrmt, Ptrmt)}
 
-output.mass.ave
-
-
-anova(m2)
 # INTERCEPT
 d.int<- as.data.frame(rbindlist(output.intc.mass))
 d.int$Source<-rep(c("N","P","N*P"))
-d.int$variable<-rep(names(sm.int)[c(8:50)], each=3)
+d.int$variable<-rep(names(sm.int)[c(8:51)], each=3)
 d.int$type<-c("Intercept")
 d.int<-d.int[ ,c(9,7,8,1,2,3,4,5,6)]
+
+d.int
 
 # SLOPE
 d.slo<- as.data.frame(rbindlist(output.slo.mass))
 d.slo$Source<-rep(c("N","P","N*P"))
-d.slo$variable<-rep(names(sm.slo)[c(8:50)], each=3)
+d.slo$variable<-rep(names(sm.slo)[c(8:51)], each=3)
 d.slo$type<-c("Slope")
 d.slo<-d.slo[ ,c(9,7,8,1,2,3,4,5,6)]
 
@@ -233,7 +288,7 @@ d.slo<-d.slo[ ,c(9,7,8,1,2,3,4,5,6)]
 # AVERAGE
 d.ave<- as.data.frame(rbindlist(output.mass.ave))
 d.ave$Source<-rep(c("N","P","N*P"))
-d.ave$variable<-rep(names(sm.ave)[c(8:50)], each=3)
+d.ave$variable<-rep(names(sm.ave)[c(8:51)], each=3)
 d.ave$type<-c("Average")
 d.ave<-d.ave[ ,c(9,7,8,1,2,3,4,5,6)]
 
@@ -277,6 +332,20 @@ pism$leaf.char[pism$variable=="Zn"]<-"Elements"
 
 head(pism)
 #write.csv(pism, file="supplemental_table_2.csv")
+
+#### DO P VALUE CORRECTION
+
+a<-p.adjust(pism$`Pr(>F)`, method ="BH", n = length(pism$`Pr(>F)`))
+table(a<0.05)
+
+p.adjust.methods
+# c("holm", "hochberg", "hommel", "bonferroni", "BH", "BY",
+#   "fdr", "none")
+
+
+
+
+###############################################################################
 pval<-spread(pism[ ,c("leaf.char","variable","Source","type","Pr(>F)")], Source,'Pr(>F)')
 head(pval)
 
@@ -306,7 +375,7 @@ slope.zero <- function(y){
   return(e)}
 
 out.t<-list()
-for(i in c(8:50)){ 
+for(i in c(8:51)){ 
   y = sm.slo[,i]
   out.t[[i-7]] <- slope.zero(y)}
 
@@ -347,7 +416,18 @@ vord
 fp$vord<-vord$order [match(fp$variable, vord$name)]
 fp<-fp[order(fp$vord),]
 head(fp)
-write.csv(fp, file="thesis_p_values_1_26_2020.csv")
+
+fp[10:20,]
+
+
+summary(samp$area_cm2)
+summary(samp$mass_g)
+
+(50.3-34.37) / 44.14
+(0.54-0.45)/0.4987
+
+
+write.csv(fp, file="thesis_p_values_4_17_2020.csv")
 
 
 
@@ -360,122 +440,162 @@ head(sm.slo)
 names(samp)
 dim(samp)
 ###  get IQR for each tree
+sm.iqr<-aggregate(samp[ ,c(12:54)], list(Tree_ID=samp$Tree_ID, Stand=samp$Stand), FUN = IQR, na.rm=T)
 
-sm.iqr<-aggregate(samp[ ,c(11:53)], list(Tree_ID=samp$Tree_ID), FUN = IQR, na.rm=T)
-head(sm.iqr)
+tail(sm.iqr)
 
-IQR(samp[,"Chl_R"])
-IQR(samp[samp$Tree_ID=="30","Chl_R"])
-IQR(samp[samp$Tree_ID=="79","Chl_R"])
+head(samp)
 
 
 # gather sm.slo and sm.iqr
-dim(sm.iqr)
-dim(sm.slo)
-giqr<-gather(sm.iqr, "variable","value",2:44)
+names(sm.iqr)
+giqr<-gather(sm.iqr, "variable","value",3:45)
 head(giqr)
 dim(giqr)
 names(sm.slo)
-gslo<-gather(sm.slo, "variable","value",8:50)
+gslo<-gather(sm.slo, "variable","value",8:51)
 dim(gslo)
+
 #formatting
 
 
 gslo$slope<-as.numeric(gslo$value)
 names(gslo)
-gslo
-f2<-gslo[ ,c(1,2,4,8,9,10)]
-giqr$unique<-paste(giqr$Tree_ID, giqr$variable)
-f2$unique<-paste(f2$Tree_ID, f2$variable)
+
+giqr$unique<-paste(giqr$Tree_ID, giqr$Stand, giqr$variable)
+head(giqr$unique)
+gslo$unique<-paste(gslo$Tree_ID,gslo$Stand, gslo$variable)
 
 ## Make giqr half as long?
 length(giqr$unique)
-length(f2$unique)
+length(gslo$unique)
 
 
 
+
+giqr[giqr$variable=="protein",]
+gslo[gslo$variable=="protein",]
 
 head(giqr)
 giqr$variable<-factor(giqr$variable, levels=c("mass_g", "area_cm2","SLA","C","N","P","Ca","Mg","Mn","Al","B","Zn","N_P","total_chl","carot","Chl_R","Ala","GABA","Glu","Val","protein","Put","Spm","Spd"))
-giqr<-na.omit(giqr)
+dim(giqr)
+
+giqr<-na.omit(giqr) # There were a lot of NAs?
 
 ## Now bring in iqr that they are the same length
-f2$iqr<-giqr$value[match(f2$unique, giqr$unique)]
+gslo$iqr<-giqr$value[match(gslo$unique, giqr$unique)]
 
-f2$normalized<-f2$slope/f2$iqr
+gslo$normalized<-gslo$slope/gslo$iqr
 
 
-aggregate(f2$slope, by=list(f2$variable), FUN="mean", na.rm=T)
-aggregate(f2$iqr, by=list(f2$variable), FUN="mean", na.rm=T)
-aggregate(f2$normalized, by=list(f2$variable), FUN="mean", na.rm=T)
 
-head(f2)
-str(f2)
-f2$Group<-""
-f2$variable<-as.character(f2$variable)
-#write.csv(f2, file="iqr_slope.csv")
+gslo$variable<-as.character(gslo$variable)
+
 ######## Figure 2!
 ## add leaf characteristic
 table(f2$variable)
-f2$Group[f2$variable=="area_cm2"]<-"Physical characteristics"
-f2$Group[f2$variable=="mass_g"]<-"Physical characteristics"
-f2$Group[f2$variable=="SLA"]<-"Physical characteristics"
+gslo$Group[gslo$variable=="area_cm2"]<-"Physical characteristics"
+gslo$Group[gslo$variable=="mass_g"]<-"Physical characteristics"
+gslo$Group[gslo$variable=="SLA"]<-"Physical characteristics"
 
-f2$Group[f2$variable=="total_chl"]<-"Photosynthetic pigments"
-f2$Group[f2$variable=="carot"]<-"Photosynthetic pigments"
-f2$Group[f2$variable=="Chl_R"]<-"Photosynthetic pigments"
+gslo$Group[gslo$variable=="total_chl"]<-"Photosynthetic pigments"
+gslo$Group[gslo$variable=="carot"]<-"Photosynthetic pigments"
+gslo$Group[gslo$variable=="Chl_R"]<-"Photosynthetic pigments"
 
-f2$Group[f2$variable=="Ala"]<-"Amino acids"
-f2$Group[f2$variable=="GABA"]<-"Amino acids"
-f2$Group[f2$variable=="Glu"]<-"Amino acids"
-f2$Group[f2$variable=="Val"]<-"Amino acids"
+gslo$Group[gslo$variable=="Ala"]<-"Amino acids"
+gslo$Group[gslo$variable=="GABA"]<-"Amino acids"
+gslo$Group[gslo$variable=="Glu"]<-"Amino acids"
+gslo$Group[gslo$variable=="Val"]<-"Amino acids"
 
-f2$Group[f2$variable=="Put"]<-"Polyamines"
-f2$Group[f2$variable=="Spd"]<-"Polyamines"
-f2$Group[f2$variable=="Spm"]<-"Polyamines"
+gslo$Group[gslo$variable=="Put"]<-"Polyamines"
+gslo$Group[gslo$variable=="Spd"]<-"Polyamines"
+gslo$Group[gslo$variable=="Spm"]<-"Polyamines"
 
-f2$Group[f2$variable=="C"]<-"Elements"
-f2$Group[f2$variable=="Mg"]<-"Elements"
-f2$Group[f2$variable=="Ca"]<-"Elements"
-f2$Group[f2$variable=="Al"]<-"Elements"
-f2$Group[f2$variable=="B"]<-"Elements"
-f2$Group[f2$variable=="Mn"]<-"Elements"
-f2$Group[f2$variable=="N"]<-"Elements"
-f2$Group[f2$variable=="N_P"]<-"Elements"
-f2$Group[f2$variable=="P"]<-"Elements"
-f2$Group[f2$variable=="S"]<-"Elements"
-f2$Group[f2$variable=="Zn"]<-"Elements"
+gslo$Group[gslo$variable=="C"]<-"Elements"
+gslo$Group[gslo$variable=="Mg"]<-"Elements"
+gslo$Group[gslo$variable=="Ca"]<-"Elements"
+gslo$Group[gslo$variable=="Al"]<-"Elements"
+gslo$Group[gslo$variable=="B"]<-"Elements"
+gslo$Group[gslo$variable=="Mn"]<-"Elements"
+gslo$Group[gslo$variable=="N"]<-"Elements"
+gslo$Group[gslo$variable=="N_P"]<-"Elements"
+gslo$Group[gslo$variable=="P"]<-"Elements"
+gslo$Group[gslo$variable=="S"]<-"Elements"
+gslo$Group[gslo$variable=="Zn"]<-"Elements"
 
-table(f2$variable, f2$Group)
 
-f2$variable<-factor(f2$variable, levels=c("mass_g", "area_cm2","SLA","C","N","P","Ca","Mg","Mn","Al","B","Zn","N_P","total_chl","carot","Chl_R","Ala","GABA","Glu","Val","protein","Put","Spm","Spd"))
+gslo$Group[gslo$variable=="protein"]<-"Soluble protein"
 
-table(f2$trmt)
-f2$trmt<-factor(f2$trmt, levels=c("Con","N","P","NP"))
-table(f2$Group)
-f2$Group<-factor(f2$Group, levels=c("Physical characteristics","Elements","Photosynthetic pigments","Amino acids","Polyamines"))
+
+table(gslo$variable, gslo$Group)
+
+
+
+
+gslo$variable<-factor(gslo$variable, levels=c("SLA", "area_cm2","mass_g","Ca","N","B","N_P","Zn","P","Mg","Mn","Al","C","total_chl","carot","Chl_R","Ala","GABA","Glu","Val","protein","Put","Spm","Spd"))
+
+table(gslo$trmt)
+gslo$trmt<-factor(gslo$trmt, levels=c("Con","N","P","NP"))
+table(gslo$Group)
+gslo$Group<-factor(gslo$Group, levels=c("Physical characteristics","Elements","Photosynthetic pigments","Amino acids","Polyamines", "Soluble protein"))
 
 # 
-head(f2)
-table(f2$variable)
+head(gslo)
+table(gslo$variable)
 
-f2<-na.omit(f2)
-head(f2)
+
+head(gslo)
+
+## AY wants to average by stand, calculate SE-  graph
+
+
+
+avg<-aggregate(gslo$normalized, by=list(Stand=gslo$Stand, Group=gslo$Group, variable=gslo$variable), FUN="mean")
+avg$group<-paste(avg$Stand, avg$variable)
+st.err <- function(x) {  sd(x, na.rm=T)}
+se<-aggregate(gslo$normalized, by=list(Stand=gslo$Stand,Group=gslo$Group,variable=gslo$variable), FUN=st.err)
+se$group<-paste(se$Stand, se$variable)
+avg$se<-se$x[match(avg$group, se$group)]
+avg$normalized<-avg$x
 library(ggplot2)
-m<-ggplot(f2, aes(x=variable,y=normalized, color=trmt, shape=Group))+
-  scale_shape_manual(values=c(0,1,2,5,7))+xlab("")+coord_flip()+
+
+## Make sure they're ordered correctly
+avg<-na.omit(avg)
+avg$variable<-factor(avg$variable, levels=c("SLA", "area_cm2","mass_g","Zn","Mg","Ca","P","B","N","Mn","N_P","C","Al","Glu","Ala","GABA","Val","protein","Put","Spm","Spd","total_chl","carot","Chl_R"))
+#avg$Group<-factor(avg$Group, levels=c("Physical characteristics","Elements","Amino acids","Polyamines","Photosynthetic pigments"))
+
+write.csv(avg, file="fig1_write_out.csv")
+avg2<-read.csv("fig1_write_out.csv")
+head(avg2)
+
+gplo<-ggplot(avg, aes(x=variable,y=normalized, shape=Group))+
+  scale_shape_manual(values=c(0,1,2,5,7,8))+xlab("")+coord_flip()+
   scale_color_manual(values=c("black","blue","red", "purple"))+
-  geom_point(aes(size=.8), stroke=2)+theme_bw()+ylab("change with depth in the crown")+
-  theme(text=element_text(size=20))+guides(size=FALSE)+geom_hline(yintercept=0, linetype="dashed")+
+  geom_point(aes(size=.2), stroke=2)+theme_bw()+ylab("change with depth in the crown")+
+  geom_errorbar(aes(ymin=normalized-se, ymax=normalized+se), width=.2)+ 
+    theme(text=element_text(size=20))+guides(size=FALSE)+geom_hline(yintercept=0, linetype="dashed")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
         panel.background = element_blank(), axis.line = element_line(colour = "black"))+
-  theme(legend.position="bottom",legend.box="vertical", legend.margin=margin())+theme(plot.title = element_text(hjust = 0.5))+
+  theme(legend.position="right",legend.box="vertical", legend.margin=margin())+theme(plot.title = element_text(hjust = 0.5))+
   theme(text=element_text(size=24))+
   guides(colour = guide_legend(override.aes = list(size=5)), shape = guide_legend(override.aes = list(size=5)))+
-  theme(legend.title = element_blank())+geom_vline(xintercept=3.5)+geom_vline(xintercept=8.5)+
-  geom_vline(xintercept=11.5)+geom_vline(xintercept=21.5)+scale_x_discrete(limits = rev(levels(f2$variable)))
-m
+  theme(legend.title = element_blank())+scale_x_discrete(limits = rev(levels(gslo$variable)))
+  #geom_vline(xintercept=3.5)+geom_vline(xintercept=8.5)
+#  geom_vline(xintercept=11.5)+geom_vline(xintercept=21.5)
 
+gplo
+
+
+
+## FIGURE 1!
+# for pdf.
+dpi=300
+tiff("05_03_thesis_fig_1.tif", width=12*dpi, height=8*dpi, res=dpi)
+gplo
+dev.off()
+
+
+############# Don't go below`!`
 
 avg.slo<-aggregate(f2$slope,by=list(variable=f2$variable, Group=f2$Group), FUN="mean", na.rm=T)
 avg.iqr<-aggregate(f2$iqr,by=list(variable=f2$variable, Group=f2$Group), FUN="mean", na.rm=T)

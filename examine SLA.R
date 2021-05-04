@@ -3,6 +3,11 @@
 b<-read.csv("Data/data.for.alex.csv")
 
 
+
+samp<-read.csv("Data/MELNHE_SugarMapleCrownDepth.csv", header=T)
+head(samp)
+
+
 head(b)
 
 
