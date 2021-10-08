@@ -2,92 +2,117 @@
 ## Alex Young   4/7/2020
 ## alexyoung.116@gmail.com
 
+library(data.table)
+library(tidyr)
+library(ggplot2)
+library(ggpubr)
+
+
+
 #samp<-read.csv("Data/MELNHE_SugarMapleCrownDepth.csv")
 samp<-read.csv("better_melnhe_sugar_maple_crown_depth.csv", header=T)
-#samp$br<-paste(samp$Tree_ID, samp$dfromtop)
+###samp$br<-paste(samp$Tree_ID, samp$dfromtop)
 head(samp)
-
-# second<-read.csv("Data/second_collection_MELNHE_SugarMapleCrownDepth.csv")
-# second$br<-paste(second$Tree.ID, second$dfromtop)
-# 
-# second$moisture<-(second$wetmass2_g-second$mass2_g)/second$wetmass2_g
-# head(second)
-# 
-# samp$moisture<-second$moisture[match(samp$br, second$br)]
-#write.csv(samp[,c(1:53,55)], file="better_melnhe_sugar_maple_crown_depth.csv")
-
-head(samp)
-
-library(ggplot2)
-
-ggplot(samp, aes(x=scaled, col=Treatment,y=moisture))+geom_point()+
-  scale_color_manual(values=c("black","blue","red","purple"))+
-  facet_wrap(~Stand)+coord_flip()+
-  geom_smooth(method="lm")+
-  labs(y = bquote('Moisture content (%)'), x = bquote('Depth in crown '~(scaled)))+
-  scale_x_reverse( lim=c(1,0), breaks=seq(0,1,.5))+
-  theme_classic()+ggtitle("Dry to wet mass comparison for second collection of leaves")
-
-
-
-# IF you want to assess the traits per unit Area rather than Mass
-#samp<-samp[,c(14:27)]/samp$SLA
-
 samp$Treatment <- factor(samp$trmt,levels=c("Control","N treatment","P treatment","N+P treatment"))
 samp$trmt <- factor(samp$trmt,levels=c("Control","N treatment","P treatment","N+P treatment"))
 samp$Tree_ID<-as.numeric(samp$Tree_ID)
 
+# tree level information
+# tree<-read.csv("Data/Tree_info_MELNHE_sugar_maple_crown.csv")
+# tree<-tree[, c(1:6)]
 
-tree<-read.csv("Data/Tree_info_MELNHE_sugar_maple_crown.csv")
-tree
-tree<-tree[, c(1:6)]
-
-
-###
-library(data.table)
-library(tidyr)
-
-
-
-# this function for calculating the slope and intercept of the linear model for each tree
-lin <- function(y30,y79,y128,y168,y249,y250, y320, y480,y571,y609,y928, y1297){
-  t30  <-coefficients(lm(y30 ~ samp[samp$Tree_ID=="30"   ,"scaled" ]))
-  t79  <-coefficients(lm(y79 ~ samp[samp$Tree_ID=="79"   ,"scaled" ]))
-  t128 <-coefficients(lm(y128~ samp[samp$Tree_ID=="128"  ,"scaled" ]))
-  t168 <-coefficients(lm(y168  ~ samp[samp$Tree_ID=="168"  ,"scaled" ]))
-  t249 <-coefficients(lm(y249  ~ samp[samp$Tree_ID=="249"  ,"scaled" ]))
-  t250 <-coefficients(lm(y250  ~ samp[samp$Tree_ID=="250"  ,"scaled" ]))
-  t320 <-coefficients(lm(y320 ~ samp[samp$Tree_ID=="320"  ,"scaled" ]))
-  t480 <-coefficients(lm(y480 ~ samp[samp$Tree_ID=="480"  ,"scaled" ]))
-  t571 <-coefficients(lm(y571  ~ samp[samp$Tree_ID=="571"  ,"scaled" ]))
-  t609 <-coefficients(lm(y609  ~ samp[samp$Tree_ID=="609"  ,"scaled" ]))
-  t928 <-coefficients(lm(y928 ~ samp[samp$Tree_ID=="928"  ,"scaled" ]))
-  t1297<-coefficients(lm(y1297  ~ samp[samp$Tree_ID=="1297"  ,"scaled"]))
-  # create one dataframe to rule them all
-  lin<-t(as.data.frame(cbind(t30,t79,t128,t168,t249,t250,t320,t480,t571,t609,t928,t1297)))
-  b<-cbind(tree,lin)
-  return(b)
-}
+# moisture analysis
+# second<-read.csv("Data/second_collection_MELNHE_SugarMapleCrownDepth.csv")
+# second$br<-paste(second$Tree.ID, second$dfromtop)
+# second$moisture<-(second$wetmass2_g-second$mass2_g)/second$wetmass2_g
+# samp$moisture<-second$moisture[match(samp$br, second$br)]
+# write.csv(samp[,c(1:53,55)], file="better_melnhe_sugar_maple_crown_depth.csv")
+# ggplot(samp, aes(x=scaled, col=Treatment,y=moisture))+geom_point()+
+#  scale_color_manual(values=c("black","blue","red","purple"))+  facet_wrap(~Stand)+coord_flip()+  geom_smooth(method="lm")+
+#  labs(y = bquote('Moisture content (%)'), x = bquote('Depth in crown '~(scaled)))+
+#  scale_x_reverse( lim=c(1,0), breaks=seq(0,1,.5))+  theme_classic()+ggtitle("Dry to wet mass comparison for second collection of leaves")
 
 
+
+# CV for leaf char- go to long format
 names(samp)
+samp_long<-gather(samp, "chx","value",12:55 )
+CV <- function(x) {sd(x,na.rm=T)/mean(x, na.rm=T)}
+
+# dvar is per unit mass.
+dvar <- aggregate(samp_long$value, 
+        by=list(Char=samp_long$chx, Ntrmt=samp_long$Ntrmt,Ptrmt=samp_long$Ptrmt, 
+                Treatment=samp_long$Treatment, Stand=samp_long$Stand),
+        FUN= CV)
+dvar
+
+## avar is per unit area.
+# IF you want to assess the traits per unit Area rather than Mass
+pre_samp_area<-samp[,c(15:55)]/samp$SLA
+samp_area<-cbind(samp[,c(1:14)],pre_samp_area)
+samp_area$Treatment <- factor(samp_area$trmt,levels=c("Control","N treatment","P treatment","N+P treatment"))
+
+names(samp_area)
 dim(samp)
-output.mass<- list() # create an empty list to catch the output
-for(i in c(12:55)){ 
-  y30 = samp[samp$Tree_ID=="30",i]
-  y79 = samp[samp$Tree_ID=="79",i]
-  y128 = samp[samp$Tree_ID=="128",i]
-  y168 = samp[samp$Tree_ID=="168",i]
-  y249 = samp[samp$Tree_ID=="249",i]
-  y250 = samp[samp$Tree_ID=="250",i]
-  y320 = samp[samp$Tree_ID=="320",i]
-  y480 = samp[samp$Tree_ID=="480",i]
-  y571 = samp[samp$Tree_ID=="571",i]
-  y609 = samp[samp$Tree_ID=="609",i]
-  y928 = samp[samp$Tree_ID=="928",i]
-  y1297 = samp[samp$Tree_ID=="1297",i]
-  output.mass[[i-11]] <- lin(y30,y79,y128,y168,y249,y250, y320, y480,y571,y609,y928, y1297)
-}
+dim(samp_area)
+
+names(samp_area)
+samp_long_area<-gather(samp_area, "chx","value",12:55 )
+names(samp_long_area)
+
+avar <- aggregate(samp_long_area$value, 
+                  by=list(Char=samp_long_area$chx, Ntrmt=samp_long_area$Ntrmt,Ptrmt=samp_long_area$Ptrmt, 
+                          Treatment=samp_long_area$Treatment, Stand=samp_long_area$Stand),
+                  FUN= CV)
+avar
+
+
+g1<-ggplot(dvar, aes(x=Char, y=x, col=Treatment, group=Stand))+
+  geom_point()+coord_flip()+ggtitle("CV of tree leaf characteristics per unit mass")+
+  scale_color_manual(values=c("black","blue","red","purple"))
+
+g2<-ggplot(avar, aes(x=Char, y=x, col=Treatment, group=Stand))+
+  geom_point()+coord_flip()+ggtitle("CV of tree leaf characteristics per unit area")+
+  scale_color_manual(values=c("black","blue","red","purple"))
+
+ggarrange(g1, g2, common.legend=T, nrow=2)
+
+ggplot(avar, aes(x=Treatment, y=x, col=Treatment, group=Stand))+
+  geom_bar(stat="identity",position=position_dodge())+facet_wrap(~Char, scales="free")
+
+head(avar)
+dvar$area.cv<-avar$x
+head(dvar)
+
+ggplot(dvar, aes(x=x, y=area.cv, col=Char, label=Char, group=Stand))+
+  geom_point()+
+  #scale_color_manual(values=c("black","blue","red","purple"))+
+  geom_abline()+geom_text(aes(label=Char),hjust=0, vjust=0)
+
+
+ggplot(dvar, aes(x=x, y=area.cv, col=Treatment, label=Char, group=Stand))+
+  geom_point()+
+  scale_color_manual(values=c("black","blue","red","purple"))+
+  geom_abline()+facet_wrap(~Char)
+
+
+#geom_text(aes(label=Char),hjust=0, vjust=0)
+
+
+#### overall CV  for avar and dvar
+cvmeana <- aggregate(avar$x, 
+                  by=list(Char=avar$Char),FUN= CV)
+
+cvmeand <- aggregate(dvar$x, 
+                     by=list(Char=avar$Char),FUN= CV)
+
+cvmeand$area<-cvmeana$x
+
+ggplot(cvmeand, aes(x=x, y=area, label=Char))+geom_point()+geom_abline()+
+  geom_text(aes(label=Char),hjust=0, vjust=0)
+
+
+
 
 
 # Additional formating
@@ -185,36 +210,6 @@ dim(sm.ave)
 # ###########################################################
 #
 
-#Example comparison for three ways to do the analysis.
-# model m1 is a linear model with Stand in the model
-head(samp)
-
-
-
-intercept<-lmer(mass_g ~ dfromtop*Ntrmt*Ptrmt + (1|Tree_ID), data=samp)
-intercept<-lmer(mass_g ~ dfromtop*Ntrmt*Ptrmt + (1|Tree_ID), data=samp)
-anova(intercept)
-
-
-intercept<-lm(moisture~ Stand+Ntrmt*Ptrmt, data=sm.int)
-anova(intercept)
-
-slope<-lm(moisture~ Stand+Ntrmt*Ptrmt, data=sm.slo)
-anova(slope)
-
-average<-lm(moisture~ Stand+Ntrmt*Ptrmt, data=sm.ave)
-anova(average)
-
-
-
-
-# model m2 is made using the package lme4
-# m2 is a mixed effect model Fixed is N*P, random effect is Stand
-library(lme4)
-library(lmerTest)
-m2<-lmer(Al~ Ntrmt*Ptrmt+(1|Stand), data=sm.ave)
-summary(m2)
-anova(m2)
 
 # model m3 is made using the package nlme
 # m3 is a mixed effect model Fixed is N*P, random effect is Stand
@@ -343,6 +338,8 @@ head(pism)
 
 a<-p.adjust(pism$`Pr(>F)`, method ="BH", n = length(pism$`Pr(>F)`))
 table(a<0.05)
+
+a
 
 p.adjust.methods
 # c("holm", "hochberg", "hommel", "bonferroni", "BH", "BY",

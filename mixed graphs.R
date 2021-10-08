@@ -68,34 +68,286 @@ library(ggpubr)
 ggarrange(gmass, garea, gSLA, common.legend=T, nrow=1, legend="bottom")
 
 
+  ggplot(samp,aes(area_cm2, mass_g,  col=Treatment, shape=Stand )) + 
+  scale_color_manual(values= c("black","blue","red","purple"))+
+  geo,+
+#  geom_hline(yintercept=0, linetype="solid") +
+  theme_bw()+ theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())+
+  xlab("Depth in the crown")+
+  ylab("leaf mass (g)")+
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0))
 
 
 
 
 ###########################
-mN_P <- lme(N_P ~ scaled*Ntrmt*Ptrmt, random=~1|Stand/Tree_ID, data=samp)
-mN <- lme(N ~ scaled*Ntrmt*Ptrmt, random=~1|Stand/Tree_ID, data=samp)
-mP <- lme(P ~ scaled*Ntrmt*Ptrmt, random=~1|Stand/Tree_ID, data=samp)
+
+############################################
 
 
-samp$fitN_P <- predict(mN_P)   #Add model fits to dataframe
-samp$fitN <- predict(mN)   #Add model fits to dataframe
-samp$fitP <- predict(mP)   #Add model fits to dataframe
-
-
-gN_P<-ggplot(samp,aes(scaled, N_P, group=interaction(Tree_ID, Stand), col=Treatment, shape=Stand )) + 
-  geom_line(aes(y=fitN_P ), linetype="longdash", size=0.8) +
+# Amino acids
+###########################
+mAla <- lme(Ala ~ scaled*Ntrmt*Ptrmt, random=~1|Stand/Tree_ID, data=samp, na.action = na.exclude)
+samp$fitAla <- predict(mAla)   #Add model fits to dataframe
+gAla<-ggplot(samp,aes(scaled, Ala, group=interaction(Tree_ID, Stand), col=Treatment, shape=Stand )) + 
+  geom_line(aes(y=fitAla ), linetype="longdash", size=0.8) +
   scale_color_manual(values= c("black","blue","red","purple"))+
   geom_point(alpha = 1) + 
   geom_hline(yintercept=0, linetype="solid") +
   theme_bw()+theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())+
   xlab("Depth in the crown")+
-  ylab("Ratio of N:P")+
+  ylab("Ala (nmol "~g^-1*") FW")+
   scale_x_continuous(expand = c(0, 0)) +
   scale_y_continuous(expand = c(0, 0))
-gN_P
+gAla
+
+mGaba <- lme(GABA ~ scaled*Ntrmt*Ptrmt, random=~1|Stand/Tree_ID, data=samp, na.action = na.exclude)
+samp$fitGaba <- predict(mGaba)   #Add model fits to dataframe
+gGaba<-ggplot(samp,aes(scaled, GABA, group=interaction(Tree_ID, Stand), col=Treatment, shape=Stand )) + 
+  geom_line(aes(y=fitGaba ), linetype="solid", size=0.8) +
+  scale_color_manual(values= c("black","blue","red","purple"))+
+  geom_point(alpha = 1) + 
+  geom_hline(yintercept=0, linetype="solid") +
+  theme_bw()+theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())+
+  xlab("Depth in the crown")+
+  ylab("GABA (nmol "~g^-1*") FW")+
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0))
+gGaba
+
+mVal <- lme(Val ~ scaled*Ntrmt*Ptrmt, random=~1|Stand/Tree_ID, data=samp, na.action = na.exclude)
+samp$fitVal <- predict(mVal)   #Add model fits to dataframe
+gVal<-ggplot(samp,aes(scaled, Val, group=interaction(Tree_ID, Stand), col=Treatment, shape=Stand )) + 
+  geom_line(aes(y=fitVal ), linetype="solid", size=0.8) +
+  scale_color_manual(values= c("black","blue","red","purple"))+
+  geom_point(alpha = 1) + 
+  geom_hline(yintercept=0, linetype="solid") +
+  theme_bw()+theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())+
+  xlab("Depth in the crown")+
+  ylab("Val (nmol "~g^-1*") FW")+
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0))
+gVal
+
+mArg <- lme(Arg ~ scaled*Ntrmt*Ptrmt, random=~1|Stand/Tree_ID, data=samp, na.action = na.exclude)
+samp$fitArg <- predict(mArg)   #Add model fits to dataframe
+gArg<-ggplot(samp,aes(scaled, Arg, group=interaction(Tree_ID, Stand), col=Treatment, shape=Stand )) + 
+  geom_line(aes(y=fitArg ), linetype="solid", size=0.8) +
+  scale_color_manual(values= c("black","blue","red","purple"))+
+  geom_point(alpha = 1, size=4) + 
+  geom_hline(yintercept=0, linetype="solid") +
+  theme_bw()+theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())+
+  xlab("Depth in the crown")+
+  ylab("Arg (nmol "~g^-1*") FW")+
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0))
+gArg
+
+mIle <- lme(Ile ~ scaled*Ntrmt*Ptrmt, random=~1|Stand/Tree_ID, data=samp, na.action = na.exclude)
+samp$fitIle <- predict(mIle)   #Add model fits to dataframe
+gIle<-ggplot(samp,aes(scaled, Ile, group=interaction(Tree_ID, Stand), col=Treatment, shape=Stand )) + 
+  geom_line(aes(y=fitIle ), linetype="solid", size=0.8) +
+  scale_color_manual(values= c("black","blue","red","purple"))+
+  geom_point(alpha = 1, size=4) + 
+  geom_hline(yintercept=0, linetype="solid") +
+  theme_bw()+theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())+
+  xlab("Depth in the crown")+
+  ylab("Ile (nmol "~g^-1*") FW")+
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0))
+gIle
+
+mLys <- lme(Lys ~ scaled*Ntrmt*Ptrmt, random=~1|Stand/Tree_ID, data=samp, na.action = na.exclude)
+samp$fitLys <- predict(mLys)   #Add model fits to dataframe
+gLys<-ggplot(samp,aes(scaled, Lys, group=interaction(Tree_ID, Stand), col=Treatment, shape=Stand )) + 
+  geom_line(aes(y=fitLys ), linetype="solid", size=0.8) +
+  scale_color_manual(values= c("black","blue","red","purple"))+
+  geom_point(alpha = 1, size=4) + 
+  geom_hline(yintercept=0, linetype="solid") +
+  theme_bw()+theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())+
+  xlab("Depth in the crown")+
+  ylab("Lys (nmol "~g^-1*") FW")+
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0))
+gLys
+
+mPro <- lme(Pro ~ scaled*Ntrmt*Ptrmt, random=~1|Stand/Tree_ID, data=samp, na.action = na.exclude)
+samp$fitPro <- predict(mPro)   #Add model fits to dataframe
+gPro<-ggplot(samp,aes(scaled, Pro, group=interaction(Tree_ID, Stand), col=Treatment, shape=Stand )) + 
+  geom_line(aes(y=fitPro ), linetype="solid", size=0.8) +
+  scale_color_manual(values= c("black","blue","red","purple"))+
+  geom_point(alpha = 1, size=4) + 
+  geom_hline(yintercept=0, linetype="solid") +
+  theme_bw()+theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())+
+  xlab("Depth in the crown")+
+  ylab("Pro (nmol "~g^-1*") FW")+
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0))
+gPro
+
+mGlu <- lme(Glu ~ scaled*Ntrmt*Ptrmt, random=~1|Stand/Tree_ID, data=samp, na.action = na.exclude)
+samp$fitGlu <- predict(mGlu)   #Add model fits to dataframe
+gGlu<-ggplot(samp,aes(scaled, Glu, group=interaction(Tree_ID, Stand), col=Treatment, shape=Stand )) + 
+  geom_line(aes(y=fitGlu ), linetype="solid", size=0.8) +
+  scale_color_manual(values= c("black","blue","red","purple"))+
+  geom_point(alpha = 1, size=4) + 
+  geom_hline(yintercept=0, linetype="solid") +
+  theme_bw()+theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())+
+  xlab("Depth in the crown")+
+  ylab("Glu (nmol "~g^-1*") FW")+
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0))
+gGlu
 
 
+
+
+
+
+
+
+
+
+library(ggpubr)
+ggarrange(gAla, gGaba, gArg,gIle, gLys,gPro, gGlu,gVal, common.legend=T, nrow=2,ncol=4, legend="bottom")
+
+
+
+##
+
+#Poly's'
+mPut <- lme(Put ~ scaled*Ntrmt*Ptrmt, random=~1|Stand/Tree_ID, data=samp, na.action = na.exclude)
+samp$fitPut <- predict(mPut)   #Add model fits to dataframe
+gPut<-ggplot(samp,aes(scaled, Put, group=interaction(Tree_ID, Stand), col=Treatment, shape=Stand )) + 
+  geom_line(aes(y=fitPut ), linetype="solid", size=0.8) +
+  scale_color_manual(values= c("black","blue","red","purple"))+
+  geom_point(alpha = 1) + 
+  geom_hline(yintercept=0, linetype="solid") +
+  theme_bw()+theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())+
+  xlab("Depth in the crown")+
+  ylab("Put (nmol "~g^-1*") FW")+
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0))
+gPut
+
+mSpd <- lme(Spd ~ scaled*Ntrmt*Ptrmt, random=~1|Stand/Tree_ID, data=samp, na.action = na.exclude)
+samp$fitSpd <- predict(mSpd)   #Add model fits to dataframe
+gSpd<-ggplot(samp,aes(scaled, Spd, group=interaction(Tree_ID, Stand), col=Treatment, shape=Stand )) + 
+  geom_line(aes(y=fitSpd ), linetype="solid", size=0.8) +
+  scale_color_manual(values= c("black","blue","red","purple"))+
+  geom_point(alpha = 1) + 
+  geom_hline(yintercept=0, linetype="solid") +
+  theme_bw()+theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())+
+  xlab("Depth in the crown")+
+  ylab("Spd (nmol "~g^-1*") FW")+
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0))
+gSpd
+
+mSpm <- lme(Spm ~ scaled*Ntrmt*Ptrmt, random=~1|Stand/Tree_ID, data=samp, na.action = na.exclude)
+samp$fitSpm <- predict(mSpm)   #Add model fits to dataframe
+gSpm<-ggplot(samp,aes(scaled, Spm, group=interaction(Tree_ID, Stand), col=Treatment, shape=Stand )) + 
+  geom_line(aes(y=fitSpm ), linetype="longdash", size=0.8) +
+  scale_color_manual(values= c("black","blue","red","purple"))+
+  geom_point(alpha = 1) + 
+  geom_hline(yintercept=0, linetype="solid") +
+  theme_bw()+theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())+
+  xlab("Depth in the crown")+
+  ylab("Spm (nmol "~g^-1*") FW")+
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0))
+gSpm
+
+
+library(ggpubr)
+ggarrange(gPut, gSpd, gSpm,common.legend=T, ncol=3, legend="bottom")
+
+
+
+
+
+
+
+## Photoproteins
+
+
+mChl_A <- lme(total_chl ~ scaled*Ntrmt*Ptrmt, random=~1|Stand/Tree_ID, data=samp, na.action = na.exclude)
+samp$fitChl_A <- predict(mChl_A)   #Add model fits to dataframe
+gChl<-ggplot(samp,aes(scaled, Chl_A, group=interaction(Tree_ID, Stand), col=Treatment, shape=Stand )) + 
+  geom_line(aes(y=fitChl_A ), linetype="solid", size=0.8) +
+  scale_color_manual(values= c("black","blue","red","purple"))+
+  geom_point(alpha = 1) + 
+  geom_hline(yintercept=0, linetype="solid") +
+  theme_bw()+theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())+
+  xlab("Depth in the crown")+
+  ylab("Chlorophyll (nmol "~g^-1*") FW")+
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0))
+gChl
+
+mChl_B <- lme(total_chl/carot ~ scaled*Ntrmt*Ptrmt, random=~1|Stand/Tree_ID, data=samp, na.action = na.exclude)
+samp$fitChl_B <- predict(mChl_B)   #Add model fits to dataframe
+gChl_caro<-ggplot(samp,aes(scaled, total_chl/carot, group=interaction(Tree_ID, Stand), col=Treatment, shape=Stand )) + 
+  geom_line(aes(y=fitChl_B ), linetype="solid", size=0.8) +
+  scale_color_manual(values= c("black","blue","red","purple"))+
+  geom_point(alpha = 1) + 
+  geom_hline(yintercept=0, linetype="solid") +
+  theme_bw()+theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())+
+  xlab("Depth in the crown")+
+  ylab("Chl to carotenoid ratio")+
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0))
+gChl_caro
+
+
+
+mcarot <- lme(carot ~ scaled*Ntrmt*Ptrmt, random=~1|Stand/Tree_ID, data=samp, na.action = na.exclude)
+samp$fitcarot <- predict(mcarot)   #Add model fits to dataframe
+gcarot<-ggplot(samp,aes(scaled, carot, group=interaction(Tree_ID, Stand), col=Treatment, shape=Stand )) + 
+  geom_line(aes(y=fitcarot ), linetype="solid", size=0.8) +
+  scale_color_manual(values= c("black","blue","red","purple"))+
+  geom_point(alpha = 1) + 
+  geom_hline(yintercept=0, linetype="solid") +
+  theme_bw()+theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())+
+  xlab("Depth in the crown")+
+  ylab("carot (nmol "~g^-1*") FW")+
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0))
+gcarot
+
+mChl_R <- lme(Chl_R ~ scaled*Ntrmt*Ptrmt, random=~1|Stand/Tree_ID, data=samp, na.action = na.exclude)
+samp$fitChl_R <- predict(mChl_R)   #Add model fits to dataframe
+gChl_R<-ggplot(samp,aes(scaled, Chl_R, group=interaction(Tree_ID, Stand), col=Treatment, shape=Stand )) + 
+  geom_line(aes(y=fitChl_R ), linetype="solid", size=0.8) +
+  scale_color_manual(values= c("black","blue","red","purple"))+
+  geom_point(alpha = 1) + 
+  geom_hline(yintercept=0, linetype="solid") +
+  theme_bw()+theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())+
+  xlab("Depth in the crown")+
+  ylab("Chl_R (nmol "~g^-1*") FW")+
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0))
+gChl_R
+
+
+
+library(ggpubr)
+ggarrange(gChl, gcarot,gChl_R, gChl_caro,common.legend=T, ncol=4, legend="bottom")
+
+
+
+
+
+
+################################################
+
+
+
+## elements
+
+mN <- lme(N ~ scaled*Ntrmt*Ptrmt, random=~1|Stand/Tree_ID, data=samp, na.action = na.exclude)
+samp$fitN <- predict(mN)   #Add model fits to dataframe
 gN<-ggplot(samp,aes(scaled, N, group=interaction(Tree_ID, Stand), col=Treatment, shape=Stand )) + 
   geom_line(aes(y=fitN ), linetype="solid", size=0.8) +
   scale_color_manual(values= c("black","blue","red","purple"))+
@@ -103,130 +355,180 @@ gN<-ggplot(samp,aes(scaled, N, group=interaction(Tree_ID, Stand), col=Treatment,
   geom_hline(yintercept=0, linetype="solid") +
   theme_bw()+theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())+
   xlab("Depth in the crown")+
-  ylab("Foiar N (mg"~g^-1*")")+
-scale_x_continuous(expand = c(0, 0)) +
+  ylab("N (mg "~g^-1*")")+
+  scale_x_continuous(expand = c(0, 0)) +
   scale_y_continuous(expand = c(0, 0))
 gN
 
+mP <- lme(P ~ scaled*Ntrmt*Ptrmt, random=~1|Stand/Tree_ID, data=samp, na.action = na.exclude)
+samp$fitP <- predict(mP)   #Add model fits to dataframe
 gP<-ggplot(samp,aes(scaled, P, group=interaction(Tree_ID, Stand), col=Treatment, shape=Stand )) + 
   geom_line(aes(y=fitP ), linetype="solid", size=0.8) +
   scale_color_manual(values= c("black","blue","red","purple"))+
   geom_point(alpha = 1) + 
   geom_hline(yintercept=0, linetype="solid") +
-  theme_bw()+ theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())+
+  theme_bw()+theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())+
   xlab("Depth in the crown")+
-  ylab("Foiar P (mg"~g^-1*")")+
-  scale_x_continuous(expand = c(0, 0)) +
+  ylab("P (mg "~g^-1*")")+
+ scale_x_continuous(expand = c(0, 0)) +
   scale_y_continuous(expand = c(0, 0))
 gP
 
-library(ggpubr)
-ggarrange(gN, gP, gN_P, common.legend=T, nrow=1, legend="bottom")
-
-############################################
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-## Maybe erase below??????
-
-
-
-################################################
-
-
-m.Ala<-lmer(Ala~ dfromtop*Ntrmt*Ptrmt+(1|Tree_ID), data=samp, na.action = na.exclude)
-
-samp$fit.Ala <- predict(m.Ala)   #Add model fits to dataframe
-g1<-ggplot(samp,aes(-dfromtop, Ala, group=interaction(Tree_ID, Stand), col=Treatment, shape=Stand )) + 
-  #  facet_grid(~Ptrmt) +
-  geom_line(aes(y=fit.Ala, lty=Ntrmt), size=0.8) +
+mN_P <- lme(N_P ~ scaled*Ntrmt*Ptrmt, random=~1|Stand/Tree_ID, data=samp, na.action = na.exclude)
+samp$fitN_P <- predict(mN_P)   #Add model fits to dataframe
+gN_P<-ggplot(samp,aes(scaled, N_P, group=interaction(Tree_ID, Stand), col=Treatment, shape=Stand )) + 
+  geom_line(aes(y=fitN_P ), linetype="longdash", size=0.8) +
   scale_color_manual(values= c("black","blue","red","purple"))+
   geom_point(alpha = 1) + 
   geom_hline(yintercept=0, linetype="solid") +
-  theme_bw()+ggtitle("model fit lines")
-g1
+  theme_bw()+theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())+
+  xlab("Depth in the crown")+
+  ylab("N:P ratio")+
+#  scale_x_continuous(expand = c(0, 0)) 
+  scale_y_continuous(expand = c(0, 0))
+gN_P
 
-m.Val<-lmer(Val~ dfromtop*Ntrmt*Ptrmt+(1|Tree_ID), data=samp, na.action = na.exclude)
-samp$fit.Val <- predict(m.Val)   #Add model fits to dataframe
+mC <- lme(C ~ scaled*Ntrmt*Ptrmt, random=~1|Stand/Tree_ID, data=samp, na.action = na.exclude)
+samp$fitC <- predict(mC)   #Add model fits to dataframe
+gC<-ggplot(samp,aes(scaled, C, group=interaction(Tree_ID, Stand), col=Treatment, shape=Stand )) + 
+  geom_line(aes(y=fitC ), linetype="solid", size=0.8) +
+  scale_color_manual(values= c("black","blue","red","purple"))+
+  geom_point(alpha = 1) + 
+#  geom_hline(yintercept=0, linetype="solid") +
+  theme_bw()+theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())+
+  xlab("Depth in the crown")+
+  ylab("C (mg "~g^-1*")")+
+  scale_x_continuous(expand = c(0, 0)) 
+#  scale_y_continuous(expand = c(0, 0))
+gC
 
-gV<-ggplot(samp,aes(-dfromtop, Val, group=interaction(Tree_ID, Stand), col=Treatment, shape=Stand )) + 
-  #  facet_grid(~Ptrmt) +
-  geom_line(aes(y=fit.Val, lty=Ntrmt), size=0.8) +
+mCa <- lme(Ca ~ scaled*Ntrmt*Ptrmt, random=~1|Stand/Tree_ID, data=samp, na.action = na.exclude)
+samp$fitCa <- predict(mCa)   #Add model fits to dataframe
+gCa<-ggplot(samp,aes(scaled, Ca, group=interaction(Tree_ID, Stand), col=Treatment, shape=Stand )) + 
+  geom_line(aes(y=fitCa ), linetype="solid", size=0.8) +
   scale_color_manual(values= c("black","blue","red","purple"))+
   geom_point(alpha = 1) + 
   geom_hline(yintercept=0, linetype="solid") +
-  theme_bw()+ggtitle("model fit lines")
-gV
+  theme_bw()+theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())+
+  xlab("Depth in the crown")+
+  ylab("Ca (mg "~g^-1*")")+
+  scale_x_continuous(expand = c(0, 0))+ 
+  scale_y_continuous(expand = c(0, 0))
+gCa
 
-
-m.GABA<-lmer(GABA~ dfromtop*Ntrmt*Ptrmt+(1|Tree_ID), data=samp, na.action = na.exclude)
-samp$fit.GABA <- predict(m.GABA)   #Add model fits to dataframe
-
-gB<-ggplot(samp,aes(-dfromtop, GABA, group=interaction(Tree_ID, Stand), col=Treatment, shape=Stand )) + 
-  #  facet_grid(~Ptrmt) +
-  geom_line(aes(y=fit.GABA, lty=Ntrmt), size=0.8) +
+mMn <- lme(Mn ~ scaled*Ntrmt*Ptrmt, random=~1|Stand/Tree_ID, data=samp, na.action = na.exclude)
+samp$fitMn <- predict(mMn)   #Add model fits to dataframe
+gMn<-ggplot(samp,aes(scaled, Mn, group=interaction(Tree_ID, Stand), col=Treatment, shape=Stand )) + 
+  geom_line(aes(y=fitMn ), linetype="solid", size=0.8) +
   scale_color_manual(values= c("black","blue","red","purple"))+
   geom_point(alpha = 1) + 
   geom_hline(yintercept=0, linetype="solid") +
-  theme_bw()+ggtitle("model fit lines")
-gB
+  theme_bw()+theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())+
+  xlab("Depth in the crown")+
+  ylab("Mn (mg "~g^-1*")")+
+  scale_x_continuous(expand = c(0, 0))+ 
+  scale_y_continuous(expand = c(0, 0))
+gMn
 
-
-
-
-#################
-
-m.B<-lmer(B~ dfromtop*Ntrmt*Ptrmt+(1|Tree_ID), data=samp, na.action = na.exclude)
-samp$fit.B <- predict(m.B)   #Add model fits to dataframe
-
-gb<-ggplot(samp,aes(-dfromtop, B, group=interaction(Tree_ID, Stand), col=Treatment, shape=Stand )) + 
-  #  facet_grid(~Ptrmt) +
-  geom_line(aes(y=fit.B, lty=Ptrmt), size=0.8) +
+mAl <- lme(Al ~ scaled*Ntrmt*Ptrmt, random=~1|Stand/Tree_ID, data=samp, na.action = na.exclude)
+samp$fitAl <- predict(mAl)   #Add model fits to dataframe
+gAl<-ggplot(samp,aes(scaled, Al, group=interaction(Tree_ID, Stand), col=Treatment, shape=Stand )) + 
+  geom_line(aes(y=fitAl ), linetype="longdash", size=0.8) +
   scale_color_manual(values= c("black","blue","red","purple"))+
   geom_point(alpha = 1) + 
   geom_hline(yintercept=0, linetype="solid") +
-  theme_bw()+ggtitle("model fit lines")+ylab("B (mg/g)")+xlab("Distance from top of crown (m)")
-gb
-
-m.Fe<-lmer(Fe~ dfromtop*Ntrmt*Ptrmt+(1|Tree_ID), data=samp, na.action = na.exclude)
-samp$fit.Fe <- predict(m.Fe)   #Add model fits to dataframe
-
-gFe<-ggplot(samp,aes(-dfromtop, Fe, group=interaction(Tree_ID, Stand), col=Treatment, shape=Stand )) + 
-  #  facet_grid(~Ptrmt) +
-  geom_line(aes(y=fit.Fe, lty=Ntrmt), size=0.8) +
-  scale_color_manual(values= c("Black","blue","red","purple"))+
-  geom_point(alpha = 1) + 
-  geom_hline(yintercept=0, linetype="solid") +
-  theme_bw()+ggtitle("model fit lines")
-gFe
-
-
-m.Al<-lmer(Al~ dfromtop*Ntrmt*Ptrmt+(1|Tree_ID), data=samp, na.action = na.exclude)
-samp$fit.Al <- predict(m.Al)   #Add model fits to dataframe
-
-gAl<-ggplot(samp,aes(-dfromtop, Al, group=interaction(Tree_ID, Stand), col=Treatment, shape=Stand )) + 
-  #  facet_grid(~Ptrmt) +
-  geom_line(aes(y=fit.Al, lty=Ptrmt), size=0.8) +
-  scale_color_manual(values= c("Black","blue","red","purple"))+
-  geom_point(alpha = 1) + 
-  geom_hline(yintercept=0, linetype="solid") +
-  theme_bw()+ggtitle("model fit lines")
+  theme_bw()+theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())+
+  xlab("Depth in the crown")+
+  ylab("Al (mg "~g^-1*")")+
+  scale_x_continuous(expand = c(0, 0))+ 
+  scale_y_continuous(expand = c(0, 0))
 gAl
 
+mB <- lme(B ~ scaled*Ntrmt*Ptrmt, random=~1|Stand/Tree_ID, data=samp, na.action = na.exclude)
+samp$fitB <- predict(mB)   #Add model fits to dataframe
+gB<-ggplot(samp,aes(scaled, B, group=interaction(Tree_ID, Stand), col=Treatment, shape=Stand )) + 
+  geom_line(aes(y=fitB ), linetype="solid", size=0.8) +
+  scale_color_manual(values= c("black","blue","red","purple"))+
+  geom_point(alpha = 1) + 
+  geom_hline(yintercept=0, linetype="solid") +
+  theme_bw()+theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())+
+  xlab("Depth in the crown")+
+  ylab("B (mg "~g^-1*")")+
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0))
+gB
 
-library(patchwork)
-gb+gFe
+mFe <- lme(Fe ~ scaled*Ntrmt*Ptrmt, random=~1|Stand/Tree_ID, data=samp, na.action = na.exclude)
+samp$fitFe <- predict(mFe)   #Add model fits to dataframe
+gFe<-ggplot(samp,aes(scaled, Fe, group=interaction(Tree_ID, Stand), col=Treatment, shape=Stand )) + 
+  geom_line(aes(y=fitFe ), linetype="longdash", size=0.8) +
+  scale_color_manual(values= c("black","blue","red","purple"))+
+  geom_point(alpha = 1) + 
+  geom_hline(yintercept=0, linetype="solid") +
+  theme_bw()+theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())+
+  xlab("Depth in the crown")+
+  ylab("Fe (mg "~g^-1*")")+
+  scale_x_continuous(expand = c(0, 0))+ 
+  scale_y_continuous(expand = c(0, 0))
+gFe
 
+mZn <- lme(Zn ~ scaled*Ntrmt*Ptrmt, random=~1|Stand/Tree_ID, data=samp, na.action = na.exclude)
+samp$fitZn <- predict(mZn)   #Add model fits to dataframe
+gZn<-ggplot(samp,aes(scaled, Zn, group=interaction(Tree_ID, Stand), col=Treatment, shape=Stand )) + 
+  geom_line(aes(y=fitZn ), linetype="solid", size=0.8) +
+  scale_color_manual(values= c("black","blue","red","purple"))+
+  geom_point(alpha = 1) + 
+  geom_hline(yintercept=0, linetype="solid") +
+  theme_bw()+theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())+
+  xlab("Depth in the crown")+
+  ylab("Zn (mg "~g^-1*")")+
+  scale_x_continuous(expand = c(0, 0))+ 
+  scale_y_continuous(expand = c(0, 0))
+gZn
+
+
+ggarrange(gC, gN,gMn, gAl, gFe,
+          gCa,gP,gB,  gZn, gN_P,
+          common.legend=T, ncol=5, nrow=2, legend="bottom")
+
+
+emmeans(mN, pairwise~ Ntrmt)
+(21.3-17.0)/mean(c(17)) # 25%
+
+emmeans(mFe, pairwise~ Ntrmt)
+(0.592-0.419)/mean(c(0.419)) # 41
+
+emmeans(mMn, pairwise~ Ntrmt)
+(2.5-1.52)/mean(c(1.52)) # 64%
+
+emmeans(mAl, pairwise~ Ntrmt)
+(0.0274-0.0194)/mean(c(0.0194))# 41%
+
+
+# P addtion
+emmeans(mP, pairwise~ Ptrmt)
+(1.87-1.15)/mean(c(1.15))# 63%
+
+emmeans(mB, pairwise~ Ptrmt)
+(0.0387-0.0268)/mean(c(0.0268))# 44%
+
+emmeans(mN_P, pairwise~ Ntrmt*Ptrmt)
+
+#NP with N
+(15.7-12.7)/(12.7) # 23 % higher
+
+#NP with P # 50% lower
+(11.3-17)/(mean(17)) # 34% lower
+
+#NP NP compared to control
+(13.89-16.59) /(16.59) # 16% lower
+
+
+
+
+gPro
+gAla
+
+gP
+gFe
+gN_P

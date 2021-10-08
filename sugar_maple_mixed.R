@@ -1,5 +1,5 @@
 ## R code for data analysis for sugar maple crown N*P.
-## Alex Young   8/1/2021
+## Alex Young   10/7/2021
 ## alexyoung.116@gmail.com
 library(data.table)
 library(tidyr)
@@ -30,80 +30,148 @@ tree<-read.csv("Data/Tree_info_MELNHE_sugar_maple_crown.csv")
 tree<-tree[, c(1:6)]
 
 
-###############################################
-### Functions for statistical anova
-aov.mixed <- function(y, Stand, Ntrmt, Ptrmt, Tree_ID){
+
+##3 create output for each leaf characteristic
+## this gets the coefficients for the fixed effects
+aov.lme <- function(y, Stand, Ntrmt, Ptrmt, Tree_ID){
   #1 aov for linear mixed effect model
   library(nlme)
-  mixed1<-anova( lme(y ~ scaled*Ntrmt*Ptrmt, random=~1|Stand/Tree_ID, data=samp, na.action=na.exclude))
-  return(mixed1)}
+  fm2<- lme(y ~ scaled*Ntrmt*Ptrmt, random=~1|Stand/Tree_ID, data=samp, na.action=na.exclude)
+  emm2<-fm2$coefficients$fixed
+  em<- as.data.frame(emm2)
+      return(em)}
 
-
-out<-list()
-for(i in c(12:55)){
-  y = samp[ ,i]
-  o<-AIC(lme(y ~ dfromtop*Ntrmt*Ptrmt, random=~1|Stand/Tree_ID, data=samp,na.action=na.exclude))
- out[[i-11]]<-o}
-
-df <- data.frame(matrix(unlist(out), nrow=length(out), byrow=TRUE))
-
-d<-as.data.frame(names(samp)[c(12:55)])
-d$dfrom<-df$matrix.unlist.out...nrow...length.out...byrow...TRUE.
-
-d$var<-d$`names(samp)[c(12:55)]`
-e<-gather(d, "option","AIC", 2:3)
-head(d)
-d$diff<-d$dfrom-d$scaled
-ggplot(d, aes(x=var, y=diff))+geom_point()+ylab("'AIC dfromtop' - 'AIC scaled'")+
-  ggtitle("Subtracting the AIC value for 'dfromtop' - 'scaled' results in positive values. The scaled depth x axis is more parsimonious")
-
-out<-as.data.frame(cbind(out))
-out
-str(out)
-out$scaled<-out$out
-out$var<-names(samp)[c(12:55)]
-
-head(out)
-
-str(out)
-dec<-out
-dec$scaled<-out$scaled
-head(dec)
+# this is for the coeficients
+output.lme<-list()
+for(i in c(12:55)){ 
+  y = samp[,i]
+  Stand= samp$Stand
+  Ntrmt=samp$Ntrmt
+  Ptrmt=samp$Ptrmt
+  output.lme[[i-11]] <- aov.lme(y, Stand, Ntrmt, Ptrmt, Tree_ID)}
+d.em<- as.data.frame(rbindlist(output.lme))
 
 
 
-write.csv(dec, file="AIC-thesis.csv")
+# this gets at the residuals of each model
+aov.res <- function(y, Stand, Ntrmt, Ptrmt, Tree_ID){
+  #1 aov for linear mixed effect model
+  library(nlme)
+  fm2<- lme(y ~ scaled*Ntrmt*Ptrmt, random=~1|Stand/Tree_ID, data=samp, na.action=na.exclude)
+  emm2<-t.test(residuals(fm2))$p.value
+  em<- as.data.frame(emm2)
+  return(em)}
 
-ggplot(dec, aes(x=dfro, y=scaled))+geom_point()
+fm2<- lme(N ~ scaled*Ntrmt*Ptrmt, random=~1|Stand/Tree_ID, data=samp, na.action=na.exclude)
+hist(residuals(fm2))
+t.test(residuals(fm2))$p.value
+t.test(residuals(fm2))
+f$p.value
+
+# this is for the t test for residuals
+output.res<-list()
+for(i in c(12:55)){ 
+  y = samp[,i]
+  Stand= samp$Stand
+  Ntrmt=samp$Ntrmt
+  Ptrmt=samp$Ptrmt
+  output.res[[i-11]] <- aov.res(y, Stand, Ntrmt, Ptrmt, Tree_ID)}
+
+d.res<- as.data.frame(rbindlist(output.res))
+d.res$variable<-rep(names(samp)[c(12:55)], each=1)
+head(d.res)
+table(d.res$emm2)
+
+# carry on with d.em for the coefficients!
+d.em$type<-rep(c("intercept","scaled","Ntrmt","Ptrmt","height*N","height*P","N:P","height*N*P"), 44)
+
+rep(names(samp)[c(12:55)], each=8)
+d.em$variable<-rep(names(samp)[c(12:55)], each=8)
 
 
-### residual checking
+names(d.em)
 
-fm1<- lme(N ~ scaled*Ntrmt*Ptrmt, random=~1|Stand/Tree_ID, data=samp, na.action=na.exclude)
-qqnorm(fm1)
-head(residuals(fm1, level = 0:1))
-summary(residuals(fm1) /
-          residuals(fm1, type = "p")) # constant scaling factor 1.432
+head(d.em)
+head(d.mean)
 
-library(emmeans)
-emmeans(fm1)
+int<-d.em[d.em$type=="intercept",]
+d.em$int<-int$emm2[match(d.em$variable, int$variable)]
+d.em$coef<-d.em$emm2+d.em$int
 
-summary(fm1)
+table(d.em$type)
+d.em$type<-factor(d.em$type, levels=c("intercept","scaled","Ntrmt","Ptrmt","height*N","height*P","N:P","height*N*P"))
 
-emm1 = emmeans(fm1, specs = pairwise ~ Ntrmt:Ptrmt)
-m<-as.data.frame(emm1$emmeans[1:4])
-(17.2+16.8)/2
-(20.3+22.4)/2
-
-(21.34-16.95)/mean(c(21.34,16.95))
-#22.9
+aggregate(d.em$coef[!d.em$type=="intercept"])
 
 
-fm1$residuals
-t.test(fm1$residuals)
 
-names(samp)
-################  Lopp through variables with linear mixed effect model, scaled x axis
+### add in leaf characteristics
+d.em$Group[d.em$variable=="area_cm2"]<-"Physical characteristics"
+d.em$Group[d.em$variable=="mass_g"]<-"Physical characteristics"
+d.em$Group[d.em$variable=="SLA"]<-"Physical characteristics"
+
+d.em$Group[d.em$variable=="total_chl"]<-"Photosynthetic pigments"
+d.em$Group[d.em$variable=="carot"]<-"Photosynthetic pigments"
+d.em$Group[d.em$variable=="Chl_R"]<-"Photosynthetic pigments"
+
+d.em$Group[d.em$variable=="Ala"]<-"Amino acids"
+d.em$Group[d.em$variable=="GABA"]<-"Amino acids"
+d.em$Group[d.em$variable=="Glu"]<-"Amino acids"
+d.em$Group[d.em$variable=="Val"]<-"Amino acids"
+
+d.em$Group[d.em$variable=="Put"]<-"Polyamines"
+d.em$Group[d.em$variable=="Spd"]<-"Polyamines"
+d.em$Group[d.em$variable=="Spm"]<-"Polyamines"
+
+d.em$Group[d.em$variable=="C"]<-"Elements"
+d.em$Group[d.em$variable=="Mg"]<-"Elements"
+d.em$Group[d.em$variable=="Ca"]<-"Elements"
+d.em$Group[d.em$variable=="Al"]<-"Elements"
+d.em$Group[d.em$variable=="B"]<-"Elements"
+d.em$Group[d.em$variable=="Mn"]<-"Elements"
+d.em$Group[d.em$variable=="N"]<-"Elements"
+d.em$Group[d.em$variable=="N_P"]<-"Elements"
+d.em$Group[d.em$variable=="P"]<-"Elements"
+d.em$Group[d.em$variable=="S"]<-"Elements"
+d.em$Group[d.em$variable=="Zn"]<-"Elements"
+
+d.em$Group[d.em$variable=="protein"]<-"Soluble protein"
+
+
+
+
+library(ggplot2)
+d.em$variable<-factor(d.em$variable, levels=c("mass_g", "area_cm2","SLA","C","N","P","Ca","Mg","Mn","Al","B","Zn","N_P","total_chl","carot","Chl_R","Ala","GABA","Glu","Val","protein","Put","Spm","Spd"))
+
+d.em$Group<-factor(d.em$Group, levels=c("Physical characteristics","Photosynthetic pigments","Elements","Amino acids","Polyamines","Soluble protein"))
+
+
+head(d.em[d.em$variable=="mass_g",], 8)
+
+d.em$norm<-d.em$emm2/ d.em$int
+
+
+ggplot(d.em[d.em$type=="scaled",], aes(x=variable, y=emm2,col=type, shape=Group))+geom_point()+coord_flip()
+
+ggplot(d.em[d.em$type=="scaled",], aes(x=variable, y=norm, shape=Group))+geom_point()+facet_wrap(~Group, scales="free_y", nrow=7)+coord_flip()+
+  geom_hline(yintercept=0, linetype='dotted', col = 'black')  
+head(d.em)
+
+gChl_caro
+ 
+ 
+
+ggplot(d.em, aes(x=variable, y=emmean, shape=Group))+geom_point()+coord_flip()
+d.em$norm<-d.em$emmean/abs(d.em$SE)
+
+
+
+ggplot(d.em, aes(x=variable, y=norm, shape=Group))+geom_point()+coord_flip()
+
+
+
+
+
 
 
 ############################################################
@@ -145,6 +213,7 @@ d.int<-d.int[ ,c(6,5, 1, 2, 3, 4)]
 
 # for an easier time of formatting names for tables
 pism<-d.int
+pism
 
 ## add leaf characteristic
 pism$leaf.char[pism$variable=="area_cm2"]<-"Physical characteristics"
