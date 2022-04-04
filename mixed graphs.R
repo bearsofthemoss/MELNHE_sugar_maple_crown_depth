@@ -212,7 +212,7 @@ gpro
 
 
 library(ggpubr)
-ggarrange(gAla, gGaba, gArg, gGlu,gVal, gpro, common.legend=T, nrow=2,ncol=3, legend="bottom")
+ggarrange(gGlu,gArg,  gGaba,gAla,  gVal, gpro, common.legend=T, nrow=2,ncol=3, legend="bottom")
 
 
 
@@ -313,7 +313,7 @@ gcarot<-ggplot(samp,aes(scaled, carot, group=interaction(Tree_ID, Stand), col=Tr
   geom_hline(yintercept=0, linetype="solid") +
   theme_bw()+theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())+
   xlab("Depth in the crown")+
-  ylab("carot (nmol "~g^-1*") FW")+
+  ylab("Carotenoids (nmol "~g^-1*") FW")+
   scale_x_continuous(expand = c(0, 0)) +
   scale_y_continuous(expand = c(0, 0))
 gcarot
@@ -335,7 +335,7 @@ gChl_R
 
 
 library(ggpubr)
-ggarrange(gChl, gcarot,gChl_R, gChl_caro,common.legend=T, ncol=4, legend="bottom")
+ggarrange(gChl, gcarot,common.legend=T, ncol=2, legend="bottom")
 
 
 
