@@ -17,6 +17,9 @@ samp$Treatment <- factor(samp$trmt,levels=c("Control","N treatment","P treatment
 samp$trmt <- factor(samp$trmt,levels=c("Control","N treatment","P treatment","N+P treatment"))
 samp$Tree_ID<-as.numeric(samp$Tree_ID)
 
+
+
+
 # tree level information
 # tree<-read.csv("Data/Tree_info_MELNHE_sugar_maple_crown.csv")
 # tree<-tree[, c(1:6)]

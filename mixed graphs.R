@@ -16,6 +16,7 @@ samp$Tree_ID<-as.numeric(samp$Tree_ID)
 
 
 ###########  SLA, mass, area
+head(samp$protein)
 
 mSLA <- lme(SLA ~ scaled*Ntrmt*Ptrmt, random=~1|Stand/Tree_ID, data=samp)
 mmass <- lme(mass_g ~ scaled*Ntrmt*Ptrmt, random=~1|Stand/Tree_ID, data=samp)
@@ -40,6 +41,8 @@ gSLA<-ggplot(samp,aes(scaled, SLA, group=interaction(Tree_ID, Stand), col=Treatm
 gSLA
 
 
+
+
 garea<-ggplot(samp,aes(scaled, area_cm2, group=interaction(Tree_ID, Stand), col=Treatment, shape=Stand )) + 
   geom_line(aes(y=fitarea ), linetype="solid", size=0.8) +
   scale_color_manual(values= c("black","blue","red","purple"))+
@@ -58,7 +61,7 @@ gmass<-ggplot(samp,aes(scaled, mass_g, group=interaction(Tree_ID, Stand), col=Tr
   geom_point(alpha = 1) + 
   geom_hline(yintercept=0, linetype="solid") +
   theme_bw()+ theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())+
-  xlab("Depth in the crown")+
+  xlab("Top of crown (0) to bottom (1)")+
   ylab("leaf mass (g)")+
   scale_x_continuous(expand = c(0, 0),breaks=seq(0,1,.2)) +
   scale_y_continuous(expand = c(0, 0))
@@ -190,10 +193,26 @@ gGlu<-ggplot(samp,aes(scaled, Glu, group=interaction(Tree_ID, Stand), col=Treatm
 gGlu
 
 
+## protein
+mpro <- lme(protein ~ scaled*Ntrmt*Ptrmt, random=~1|Stand/Tree_ID, data=samp, na.action = na.exclude)
+samp$fitpro <- predict(mpro)   #Add model fits to dataframe
+
+gpro<-ggplot(samp,aes(scaled, protein, group=interaction(Tree_ID, Stand), col=Treatment, shape=Stand )) + 
+  geom_line(aes(y=fitpro ), linetype="solid", size=0.8) +
+  scale_color_manual(values= c("black","blue","red","purple"))+
+  geom_point(alpha = 1) + 
+  geom_hline(yintercept=0, linetype="solid") +
+  theme_bw()+theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())+
+  xlab("Depth in the crown")+
+  ylab("Soluble protein (nmol "~g^-1*") FW")+
+  scale_x_continuous(expand = c(0, 0),breaks=seq(0,1,.2)) +
+  scale_y_continuous(expand = c(0, 0))
+gpro
+
 
 
 library(ggpubr)
-ggarrange(gAla, gGaba, gArg, gGlu,gVal, common.legend=T, nrow=2,ncol=3, legend="bottom")
+ggarrange(gAla, gGaba, gArg, gGlu,gVal, gpro, common.legend=T, nrow=2,ncol=3, legend="bottom")
 
 
 
