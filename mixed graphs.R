@@ -194,11 +194,11 @@ gGlu
 
 
 ## protein
-mpro <- lme(protein ~ scaled*Ntrmt*Ptrmt, random=~1|Stand/Tree_ID, data=samp, na.action = na.exclude)
-samp$fitpro <- predict(mpro)   #Add model fits to dataframe
+mprot <- lme(protein ~ scaled*Ntrmt*Ptrmt, random=~1|Stand/Tree_ID, data=samp, na.action = na.exclude)
+samp$fitprot <- predict(mprot)   #Add model fits to dataframe
 
-gpro<-ggplot(samp,aes(scaled, protein, group=interaction(Tree_ID, Stand), col=Treatment, shape=Stand )) + 
-  geom_line(aes(y=fitpro ), linetype="solid", size=0.8) +
+gprot<-ggplot(samp,aes(scaled, protein, group=interaction(Tree_ID, Stand), col=Treatment, shape=Stand )) + 
+  geom_line(aes(y=fitprot ), linetype="solid", size=0.8) +
   scale_color_manual(values= c("black","blue","red","purple"))+
   geom_point(alpha = 1) + 
   geom_hline(yintercept=0, linetype="solid") +
@@ -207,12 +207,12 @@ gpro<-ggplot(samp,aes(scaled, protein, group=interaction(Tree_ID, Stand), col=Tr
   ylab("Soluble protein (nmol "~g^-1*") FW")+
   scale_x_continuous(expand = c(0, 0),breaks=seq(0,1,.2)) +
   scale_y_continuous(expand = c(0, 0))
-gpro
+gprot
 
 
 
 library(ggpubr)
-ggarrange(gAla, gGaba, gArg, gGlu,gVal, gpro, common.legend=T, nrow=2,ncol=3, legend="bottom")
+ggarrange(gGlu, gArg, gGaba , gAla ,gVal, gprot, common.legend=T, nrow=2,ncol=3, legend="bottom")
 
 
 
@@ -496,7 +496,10 @@ ggarrange(gN,gMn, gAl, gFe,
           common.legend=T, ncol=4, nrow=2, legend="bottom")
 
 
+library(emmeans)
+
 emmeans(mN, pairwise~ Ntrmt)
+
 (21.3-17.0)/mean(c(17)) # 25%
 
 emmeans(mFe, pairwise~ Ntrmt)
@@ -508,6 +511,8 @@ emmeans(mMn, pairwise~ Ntrmt)
 emmeans(mAl, pairwise~ Ntrmt)
 (0.0274-0.0194)/mean(c(0.0194))# 41%
 
+emmeans(mAla, pairwise~ Ntrmt)
+(486-354)/mean(c(354))# 37%
 
 # P addtion
 emmeans(mP, pairwise~ Ptrmt)

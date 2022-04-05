@@ -10,8 +10,7 @@ library(neonUtilities)
 library(rgdal)
 library(rgeos)
 
-# Alex's plots
-plots<-readOGR("C:\\Users\\Dropcopter2\\Documents\\R\\hyperspectral R\\mel_NEON\\plot_shp","Bartlett_intensive_sites_30x30")
+#   plots<-readOGR(" ",Bartlett_intensive_sites_30x30")
 
 # transform to UTM coordinates
 crss <- make_EPSG()
