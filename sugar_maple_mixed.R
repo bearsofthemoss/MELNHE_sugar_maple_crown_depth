@@ -9,6 +9,9 @@ library(tidyr)
 samp<-read.csv("better_melnhe_sugar_maple_crown_depth.csv", header=T)
 head(samp)
 
+samp$scaled<-log((samp$scaled+1.00001))
+
+
 # second<-read.csv("Data/second_collection_MELNHE_SugarMapleCrownDepth.csv")
 # second$br<-paste(second$Tree.ID, second$dfromtop)
 # 
@@ -268,7 +271,7 @@ head(fp)
 # fp$NP.adj<-p.adjust(fp$`N*P`,method="hochberg")
 # fp$height.adj<-p.adjust(fp$`height*N*P`,method="hochberg")
 
-write.csv(fp, file="thesis_p_values_4_5_2022.csv")
+write.csv(fp, file="thesis_p_values_4_9_2022.csv")
 
 
 
