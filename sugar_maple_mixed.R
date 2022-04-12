@@ -9,6 +9,9 @@ library(tidyr)
 samp<-read.csv("better_melnhe_sugar_maple_crown_depth.csv", header=T)
 head(samp)
 
+samp$scaled<-log((samp$scaled+1.00001))
+
+
 # second<-read.csv("Data/second_collection_MELNHE_SugarMapleCrownDepth.csv")
 # second$br<-paste(second$Tree.ID, second$dfromtop)
 # 
@@ -170,7 +173,7 @@ output.mixed
 # so some formatting
 d.int<- as.data.frame(rbindlist(output.mixed))
 d.int
-d.int$Source<-rep(c("intercept","height","N","P","height*N","height*P","N*P","height*N*P"))
+d.int$Source<-rep(c("intercept","depth","N","P","depth*N","depth*P","N*P","depth*N*P"))
 dim(d.int)
 
 d.int
@@ -180,9 +183,9 @@ rep(names(samp)[c(12:55)], each=8)
 d.int$variable<-rep(names(samp)[c(12:55)], each=8)
 names(d.int)
 
-
+names(d.int)
 d.int<-d.int[ ,c(6,5, 1, 2, 3, 4)]
-
+names(d.int)
 # for an easier time of formatting names for tables
 pism<-d.int
 pism
@@ -199,7 +202,7 @@ pism$Group[pism$variable=="Al"]<-"Elements"
 pism$Group[pism$variable=="B"]<-"Elements"
 pism$Group[pism$variable=="Mn"]<-"Elements"
 pism$Group[pism$variable=="N"]<-"Elements"
-pism$Group[pism$variable=="N_P"]<-"Elements"
+pism$Group[pism$variable=="Fe"]<-"Elements"
 pism$Group[pism$variable=="P"]<-"Elements"
 pism$Group[pism$variable=="S"]<-"Elements"
 pism$Group[pism$variable=="Zn"]<-"Elements"
@@ -208,11 +211,12 @@ pism$Group[pism$variable=="total_chl"]<-"Photosynthetic pigments"
 pism$Group[pism$variable=="carot"]<-"Photosynthetic pigments"
 pism$Group[pism$variable=="Chl_R"]<-"Photosynthetic pigments"
 
-pism$Group[pism$variable=="Ala"]<-"Amino acids"
-pism$Group[pism$variable=="GABA"]<-"Amino acids"
-pism$Group[pism$variable=="Arg"]<-"Amino acids"
-pism$Group[pism$variable=="Glu"]<-"Amino acids"
-pism$Group[pism$variable=="Val"]<-"Amino acids"
+pism$Group[pism$variable=="Ala"]<-"Amino acids and soluble protein"
+pism$Group[pism$variable=="GABA"]<-"Amino acids and soluble protein"
+pism$Group[pism$variable=="Arg"]<-"Amino acids and soluble protein"
+pism$Group[pism$variable=="Glu"]<-"Amino acids and soluble protein"
+pism$Group[pism$variable=="Val"]<-"Amino acids and soluble protein"
+
 
 pism$Group[pism$variable=="Put"]<-"Polyamines"
 pism$Group[pism$variable=="Spd"]<-"Polyamines"
@@ -223,37 +227,51 @@ head(pism)
 ## order fp by the order of variables. 
 
 order<-seq(1:44)
-name<-c("mass_g",	"area_cm2"	,"SLA","C","N","N_P","P","Ca","Mg","Mn","Al","Fe","B",	"Zn",	"S"	,"Put",	"Spd"	,"Spm","Glu","Arg","Ala","Pro","GABA","Val","Ile","Lys","protein","total_chl",	"carot"	, "Chl_R"	,	"Chl_A",	"Chl_B"	,"K"	,"Sr","Asp","Leu"	,	"Pro"		,"s_Al"	,"s_Ca"	,"s_K",	"s_Mn",	"s_P"	,"s_Mg"	,"s_Zn")
+name<-c("mass_g",	"area_cm2","SLA", "Put",	"Spd"	,"Spm", "Glu","Arg","Ala","GABA","Val","protein","N","P","Ca","Mg","Mn","Al","Fe","B",	"Zn","total_chl",	"carot"	,
+        "s_Al"	,"s_Ca"	,"s_K",	"s_Mn",	"s_P"	,"s_Mg"	,"s_Zn",	"Chl_A",	"Chl_B"	,"Chl_R", "C", "S"	,"K"	,"Sr","N_P","Ile","Lys","Asp","Leu"	,	"Pro"	,"moisture"	)
+
+
+
 
 
 length(name)
 
+pism$variable %in% name 
 
+tail(pism)
 vord<-as.data.frame(order, name)
 vord$name<-rownames(vord)
 vord$order<-as.numeric(vord$order)
 
 
+names(pism)
 #order the variables
 fp<-spread(pism[ , c(1,2,6)], "Source","p-value")
 
 fp$vord<-vord$order [match(fp$variable, vord$name)]
+fp$Group <- pism$Group[match(fp$variable, pism$variable)]
+
 fp<-fp[order(fp$vord),]
 
 # order the colums, add some as well.
 fp$leaf.char<-pism$leaf.char[match(fp$variable, pism$variable)]
-fp<-fp[ ,c(11,1,2,7,9,3,5,8,4)]
+str(fp)
+
+fp<-fp[ ,c(11,10,1,2,7,9,3,5,8,4)]
 head(fp)
 
-fp$height.adj<-p.adjust(fp$height,method="hochberg")
-fp$N.adj<-p.adjust(fp$N,method="hochberg")
-fp$P.adj<-p.adjust(fp$P,method="hochberg")
-fp$heightN.adj<-p.adjust(fp$`height*N`,method="hochberg")
-fp$heightP.adj<-p.adjust(fp$`height*P`,method="hochberg")
-fp$NP.adj<-p.adjust(fp$`N*P`,method="hochberg")
-fp$height.adj<-p.adjust(fp$`height*N*P`,method="hochberg")
 
-write.csv(fp, file="thesis_p_values_3_31_2022.csv")
+
+
+# fp$height.adj<-p.adjust(fp$height,method="hochberg")
+# fp$N.adj<-p.adjust(fp$N,method="hochberg")
+# fp$P.adj<-p.adjust(fp$P,method="hochberg")
+# fp$heightN.adj<-p.adjust(fp$`height*N`,method="hochberg")
+# fp$heightP.adj<-p.adjust(fp$`height*P`,method="hochberg")
+# fp$NP.adj<-p.adjust(fp$`N*P`,method="hochberg")
+# fp$height.adj<-p.adjust(fp$`height*N*P`,method="hochberg")
+
+write.csv(fp, file="thesis_p_values_4_9_2022.csv")
 
 
 
