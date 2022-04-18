@@ -114,12 +114,20 @@ d.em$Group[d.em$variable=="Spd"]<-"Polyamines"
 d.em$Group[d.em$variable=="Spm"]<-"Polyamines"
 
 
+### name updates
+d.em$variable[d.em$variable=="total_chl"]<-"Chlorophyll"
+d.em$variable[d.em$variable=="carot"]<-"Carotenoids"
+d.em$variable[d.em$variable=="mass_g"]<-"leaf mass"
+d.em$variable[d.em$variable=="area_cm2"]<-"leaf area"
 
+
+
+table(d.em$variable)
 
 library(ggplot2)
-d.em$variable<-factor(d.em$variable, levels=c( "SLA","area_cm2","mass_g","Zn","B","Fe","Al","Mn","Mg","Ca","P","N","Spd","Spm","Put",
+d.em$variable<-factor(d.em$variable, levels=c( "SLA","leaf area","leaf mass","Zn","B","Fe","Al","Mn","Mg","Ca","P","N","Spd","Spm","Put",
                                                "protein","Lys","Ile","Val","GABA","Pro","Ala","Arg","Glu",
-                                               "carot","total_chl"))
+                                               "Carotenoids","Chlorophyll"))
 
 d.em$Group<-factor(d.em$Group, levels=c("Physical characteristics","Elements","Polyamines","Amino acids and soluble protein","Photosynthetic pigments"))
 
@@ -144,6 +152,7 @@ library(ggplot2)
 # couple of clean up vaariable names
 ggplot(dnp, aes(x=variable, y=norm, col=`Fixed effect`))+geom_point()+facet_wrap(~Group, scales="free_y", ncol=2)+coord_flip()+
   geom_hline(yintercept=0, linetype='dotted', col = 'black')  +scale_color_manual(values=c("black","blue","red"))+
-  xlab("Leaf characteristics")+ylab("Direction and effect size from top to bottom of the crown")+theme(legend.position = "bottom")
+  xlab("Leaf characteristics")+ylab("Direction and effect size from top to bottom of the crown")+theme(legend.position = "bottom")+
+  theme_bw()+theme(panel.grid.major = element_blank(), panel.grid.minor=element_blank())
 
 

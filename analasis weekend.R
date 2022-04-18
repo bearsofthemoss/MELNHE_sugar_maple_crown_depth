@@ -1,7 +1,7 @@
 
 ## R code for data analysis for sugar maple crown N*P.
 ## Alex Young   9/18/2021
-## alexyoung.116@gmail.com
+## alexyoung.116@gmail
 
 library(data.table)
 library(tidyr)

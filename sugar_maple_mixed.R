@@ -9,7 +9,7 @@ library(tidyr)
 samp<-read.csv("better_melnhe_sugar_maple_crown_depth.csv", header=T)
 head(samp)
 
-samp$scaled<-log((samp$scaled+1.00001))
+#samp$scaled<-log((samp$scaled+1.00001))
 
 
 # second<-read.csv("Data/second_collection_MELNHE_SugarMapleCrownDepth.csv")
