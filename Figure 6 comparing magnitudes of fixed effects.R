@@ -135,23 +135,31 @@ d.em$norm<-d.em$emm2/ d.em$int
 
 
 
-
+table(d.em$`Fixed effect`)
 
 
 dsca<-subset(d.em, `Fixed effect` == "Depth")
 dntr<-subset(d.em, `Fixed effect` == "Ntrmt")
 dptr<-subset(d.em, `Fixed effect` == "Ptrmt")
 
+dphtr<-subset(d.em, `Fixed effect` == "height*P")
+dnhtr<-subset(d.em, `Fixed effect` == "height*N")
 
-dnp<-rbind(dsca, dntr, dptr)
+
+dnp<-rbind(dsca, dntr, dptr, dphtr, dnhtr)
 dnp<-dnp[!is.na(dnp$Group),]
 
 
+head(dnp)
+
+table(dnp$`Fixed effect`)
 
 library(ggplot2)
+
+
 # couple of clean up vaariable names
 ggplot(dnp, aes(x=variable, y=norm, col=`Fixed effect`))+geom_point()+facet_wrap(~Group, scales="free_y", ncol=2)+coord_flip()+
-  geom_hline(yintercept=0, linetype='dotted', col = 'black')  +scale_color_manual(values=c("black","blue","red"))+
+  geom_hline(yintercept=0, linetype='dotted', col = 'black')  +scale_color_manual(values=c("black","blue","red","light blue","pink"))+
   xlab("Leaf characteristics")+ylab("Direction and effect size from top to bottom of the crown")+theme(legend.position = "bottom")+
   theme_bw()+theme(panel.grid.major = element_blank(), panel.grid.minor=element_blank())
 
