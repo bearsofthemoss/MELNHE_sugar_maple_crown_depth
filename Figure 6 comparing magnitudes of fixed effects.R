@@ -34,7 +34,6 @@ tree<-read.csv("Data/Tree_info_MELNHE_sugar_maple_crown.csv")
 tree<-tree[, c(1:6)]
 
 
-
 ##3 create output for each leaf characteristic
 ## this gets the coefficients for the fixed effects
 aov.lme <- function(y, Stand, Ntrmt, Ptrmt, Tree_ID){
@@ -55,6 +54,8 @@ for(i in c(12:55)){
   output.lme[[i-11]] <- aov.lme(y, Stand, Ntrmt, Ptrmt, Tree_ID)}
 d.em<- as.data.frame(rbindlist(output.lme))
 
+
+d.em
 
 # carry on with d.em for the coefficients!
 d.em$`Fixed effect`<-rep(c("intercept","Depth","Ntrmt","Ptrmt","height*N","height*P","N:P","height*N*P"), 44)
@@ -100,7 +101,6 @@ table(d.em$variable)
 
 d.em$Group[d.em$variable=="total_chl"]<-"Photosynthetic pigments"
 d.em$Group[d.em$variable=="carot"]<-"Photosynthetic pigments"
-#d.em$Group[d.em$variable=="Chl_R"]<-"Photosynthetic pigments"
 
 d.em$Group[d.em$variable=="Ala"]<-"Amino acids and soluble protein"
 d.em$Group[d.em$variable=="GABA"]<-"Amino acids and soluble protein"
@@ -115,18 +115,40 @@ d.em$Group[d.em$variable=="Spm"]<-"Polyamines"
 
 
 ### name updates
-d.em$variable[d.em$variable=="total_chl"]<-"Chlorophyll"
+d.em[d.em$variable=="total_chl","variable"]<-"Chlorophyll"
+d.em[d.em$variable=="carot","variable"]<-"Carotenoids"
+d.em[d.em$variable=="mass_g","variable"]<-"leaf mass"
+d.em[d.em$variable=="area_cm2","variable"]<-"leaf area"
+d.em[d.em$variable=="Put","variable"]<-"Putrescine"
+d.em[d.em$variable=="Spm","variable"]<- "Spermine"
+d.em[d.em$variable=="Spd","variable"]<-"Spermidine"
+d.em[d.em$variable=="Glu","variable"]<-"Glutamine"
+d.em[d.em$variable=="Arg","variable"]<-"Arginine"
+d.em[d.em$variable=="Ala","variable"]<-"Alanine"
+d.em[d.em$variable=="Val","variable"]<-"Valine"
+
+
+
+
+
+
 d.em$variable[d.em$variable=="carot"]<-"Carotenoids"
 d.em$variable[d.em$variable=="mass_g"]<-"leaf mass"
 d.em$variable[d.em$variable=="area_cm2"]<-"leaf area"
+d.em$variable[d.em$variable=="Put"]<-"Putrescine"
+d.em$variable[d.em$variable=="Spm"]<-"Spermine"
+d.em$variable[d.em$variable=="Spd"]<-"Spermidine"
+d.em$variable[d.em$variable=="Glu"]<-"Glutamine"
+d.em$variable[d.em$variable=="Arg"]<-"Arginine"
+d.em$variable[d.em$variable=="Ala"]<-"Alanine"
+d.em$variable[d.em$variable=="Val"]<-"Valine"
 
-
-
+head(d.em)
 table(d.em$variable)
 
 library(ggplot2)
-d.em$variable<-factor(d.em$variable, levels=c( "SLA","leaf area","leaf mass","Zn","B","Fe","Al","Mn","Mg","Ca","P","N","Spd","Spm","Put",
-                                               "protein","Lys","Ile","Val","GABA","Pro","Ala","Arg","Glu",
+d.em$variable<-factor(d.em$variable, levels=c( "SLA","leaf area","leaf mass","Zn","B","Fe","Al","Mn","Mg","Ca","P","N","Spermidine","Spermine","Putrescine",
+                                               "protein","Lys","Ile","Valine","GABA","Proline","Alanine","Arginine","Glutamine",
                                                "Carotenoids","Chlorophyll"))
 
 d.em$Group<-factor(d.em$Group, levels=c("Physical characteristics","Elements","Polyamines","Amino acids and soluble protein","Photosynthetic pigments"))
@@ -158,7 +180,7 @@ library(ggplot2)
 
 
 # couple of clean up vaariable names
-ggplot(dnp, aes(x=variable, y=norm, col=`Fixed effect`))+geom_point()+facet_wrap(~Group, scales="free_y", ncol=2)+coord_flip()+
+ggplot(dnp, aes(x=variable, y=norm, col=`Fixed effect`))+geom_point(position=position_dodge(.2))+facet_wrap(~Group, scales="free_y", ncol=3)+coord_flip()+
   geom_hline(yintercept=0, linetype='dotted', col = 'black')  +scale_color_manual(values=c("black","blue","red","light blue","pink"))+
   xlab("Leaf characteristics")+ylab("Direction and effect size from top to bottom of the crown")+theme(legend.position = "bottom")+
   theme_bw()+theme(panel.grid.major = element_blank(), panel.grid.minor=element_blank())
