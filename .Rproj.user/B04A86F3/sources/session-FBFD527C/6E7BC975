@@ -1,0 +1,26 @@
+{
+    "id": "6E7BC975",
+    "path": "~/GitHub/MELNHE_sugar_maple_crown_depth/Generate_graphs_sugar_maple_crown.R",
+    "project_path": "Generate_graphs_sugar_maple_crown.R",
+    "type": "r_source",
+    "hash": "0",
+    "contents": "",
+    "dirty": true,
+    "created": 1668476808645.0,
+    "source_on_save": false,
+    "relative_order": 2,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "470,0",
+        "scrollLine": "436"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1669599744,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1669600398290,
+    "read_only": false,
+    "read_only_alternatives": []
+}
