@@ -1,0 +1,463 @@
+
+
+
+
+
+
+
+
+
+table(is.na(FIATree$PLANTED_LAB))  # 13 NAs in is planted
+FIATree[FIATree$IS_PLANTED=="NA",]
+
+
+dim(FIATree)
+
+table( FIATree$COMMON_NAME,FIATree$RIPARIAN_LAB)  # only 16 riparian trees.
+table(is.na(FIATree$IS_RIPARIAN))
+
+
+table(FIATree$COMMOM_NAME,FIATree$STREET_TREE_LAB) # 76 / 639  = 20% of the population
+
+
+
+
+      
+load("C:\\Users\\bears\\Desktop\\WashingtonDC_2019_Certification_tables_figures_2020_2021_update.Rdata")
+
+
+#############################################################################
+
+
+# 	Seedlings by species and land use
+
+###########
+library(dplyr)
+names(FIATree)
+
+names(Seedling)
+
+tmp1 <- Seedling %>% group_by(COMMON_NAME, LAND_USE, STRATUM_CN, PLT_CN)%>%
+  summarize(TRE_ADJ = sum(SEEDLING_ADJ),  #sum to plot - sample unit
+            .groups = 'drop') %>%        
+  group_by(COMMON_NAME,LAND_USE,STRATUM_CN) %>%
+  summarize(tre_s = sum(TRE_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+            tre_s2 = sum(TRE_ADJ^2),  # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)) 
+            .groups = 'drop')
+
+
+tmp1
+
+tmp2 <-  right_join(select(Stratum, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_PLOT_COUNT, STRATUM_WEIGHT, STRATUM_CN), tmp1, by = "STRATUM_CN") %>% # join to POP_STATUM values
+  mutate(var_tre = ((tre_s2 - STRATUM_PLOT_COUNT * ((tre_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))),
+         TRE_pop =  ESTN_UNIT_ACRES * STRATUM_WEIGHT * tre_s/ STRATUM_PLOT_COUNT,
+         TRE_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_tre) +
+             (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_tre)) # calculate stratum-damage variance
+#########
+
+
+tmp3 <- tmp2 %>% group_by(COMMON_NAME, LAND_USE) %>% 
+  summarize(TRE_POP = sum(TRE_pop, na.rm = T),
+            TRE_VAR = sum(TRE_var, na.rm = T),
+            .groups = 'drop') %>%
+  mutate(TRE_STND_ERR = sqrt(TRE_VAR),
+         TRE_PCT_WHOLE_POP = (TRE_POP/sum(filter(iTreeTree, STATUSCD == 1)$TREES_PER_PLOT))*100) 
+
+## Should it be iTreeTree in the last line?   (FIATree and iTreeTree have the same number of live trees.)
+
+
+##############
+###
+tmp3
+
+tmp7 <- Seedling %>% group_by(LAND_USE, STRATUM_CN, PLT_CN) %>%
+  summarize(TRE_ADJ = sum(SEEDLING_ADJ),  #sum to plot - sample unit
+            .groups = 'drop') %>%        
+  group_by(LAND_USE,STRATUM_CN) %>%
+  summarize(tre_s = sum(TRE_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+            tre_s2 = sum(TRE_ADJ^2),  # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)) 
+            .groups = 'drop')
+
+tmp7
+
+tmp8 <-  right_join(select(Stratum, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_PLOT_COUNT, STRATUM_WEIGHT, STRATUM_CN), tmp7, by = "STRATUM_CN") %>% # join to POP_STATUM values
+  mutate(var_tre = ((tre_s2 - STRATUM_PLOT_COUNT * ((tre_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))),
+         TRE_pop =  ESTN_UNIT_ACRES * STRATUM_WEIGHT * tre_s/ STRATUM_PLOT_COUNT,
+         TRE_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_tre) +
+                                                                  (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_tre)) # calculate stratum-damage variance
+
+tmp8
+
+tmp9 <- tmp8 %>% group_by( LAND_USE) %>% 
+  summarize(TRE_POP = sum(TRE_pop, na.rm = T),
+            TRE_VAR = sum(TRE_var, na.rm = T),
+            .groups = 'drop') %>%
+  mutate(TRE_STND_ERR = sqrt(TRE_VAR),
+         COMMON_NAME = 'Total',
+         TRE_PCT_WHOLE_POP = (TRE_POP/sum(filter(FIATree, STATUSCD ==1)$TREES_PER_PLOT))*100) 
+
+
+tmp9
+
+
+
+
+tmp3
+#####################################################################
+### now work with tmp3 to get ownerships as columns- pop estimates and standard error
+tre_pop<-spread(tmp3[ ,c("COMMON_NAME", "LAND_USE","TRE_POP")], "LAND_USE","TRE_POP")
+tre_stnd_err<-spread(tmp3[ ,c("COMMON_NAME", "LAND_USE","TRE_STND_ERR")], "LAND_USE","TRE_STND_ERR")
+
+tre_pop_tot<-spread(tmp9[ ,c("COMMON_NAME", "LAND_USE","TRE_POP")], "LAND_USE","TRE_POP")
+tre_stnd_err_tot<-spread(tmp9[ ,c("COMMON_NAME", "LAND_USE","TRE_STND_ERR")], "LAND_USE","TRE_STND_ERR")
+
+
+
+## add in the row calulated from 'total' per owner group
+tre_pop<-rbind(tre_pop, tre_pop_tot)
+tre_stnd_err<-rbind(tre_stnd_err, tre_stnd_err_tot)
+
+
+tre_stnd_err
+# bring in the re-named SE columns
+tre_pop$se_commercial<-tre_stnd_err$Commercial
+tre_pop$se_forestland<-tre_stnd_err$`Forest land`
+tre_pop$se_institutional<-tre_stnd_err$Institutional
+tre_pop$se_multifam<-tre_stnd_err$`Multi-family`
+tre_pop$se_park<-tre_stnd_err$Park
+tre_pop$se_residential<-tre_stnd_err$Residential
+
+
+seedling_landuse <- cbind(tre_pop[ ,1],tre_pop[ ,"Commercial"], tre_pop[ ,"se_commercial"],
+                            tre_pop[ ,"Forest land"], tre_pop[ ,"se_forestland"],
+                             tre_pop[ ,"Institutional"], tre_pop[ ,"se_institutional"],
+                             tre_pop[ ,"Multi-family"], tre_pop[ ,"se_multifam"],
+                             tre_pop[ ,"Park"], tre_pop[ ,"se_park"],
+                             tre_pop[ ,"Residential"], tre_pop[ ,"se_residential"]
+                             )
+
+
+seedling_landuse[is.na(seedling_landuse)] <-0
+str(seedling_landuse)
+
+seedling_landuse[,2]<-format(round(seedling_landuse[,2], digits=0), big.mark=",")
+seedling_landuse[,3]<-format(round(seedling_landuse[,3], digits=0), big.mark=",")
+seedling_landuse[,4]<-format(round(seedling_landuse[,4], digits=0),  big.mark=",")
+seedling_landuse[,5]<-format(round(seedling_landuse[,5], digits=0),  big.mark=",")
+seedling_landuse[,6]<-format(round(seedling_landuse[,6], digits=0),  big.mark=",")
+seedling_landuse[,7]<-format(round(seedling_landuse[,7], digits=0), big.mark=",")
+seedling_landuse[,8]<-format(round(seedling_landuse[,8], digits=0), big.mark=",")
+seedling_landuse[,9]<-format(round(seedling_landuse[,9], digits=0),  big.mark=",")
+seedling_landuse[,10]<-format(round(seedling_landuse[,10], digits=0),  big.mark=",")
+seedling_landuse[,11]<-format(round(seedling_landuse[,11], digits=0),  big.mark=",")
+seedling_landuse[,12]<-format(round(seedling_landuse[,12], digits=0),  big.mark=",")
+seedling_landuse[,13]<-format(round(seedling_landuse[,13], digits=0),  big.mark=",")
+
+(seedling_landuse)
+
+
+library(kableExtra)
+a <- nrow(seedling_landuse)
+timse<-  kable(seedling_landuse, format = "html",
+              booktabs = TRUE,
+              #     digits =c(0,0,0,1),
+              # caption = tab. _cap,
+              col.names = (c("Seedling species","Commercial (number)","Commercial standard error",
+                             "Forest land (number)","Forest land standard error",
+                             "Institutional (number)","Institutional standard error",
+                             "Multi-family (number)","Multi-family standard error",
+                             "Park (number)","Park standard error",
+                             "Residential (number)","Residential standard error")),
+              align = c("l","r", "r", "r","r", "r", "r","r", "r", "r","r", "r", "r"),
+              #  format.args = list(big.mark = ','),
+              linesep = "") %>%
+  kable_styling(latex_options="HOLD_position")%>%
+  row_spec(0, bold=TRUE) %>%
+  row_spec(a, bold=TRUE) %>%
+  footnote(general = c("Due to rounding, not all values will add up exactly."), general_title = "", threeparttable = TRUE)
+
+timse
+
+
+
+
+      #####################################################
+      
+# # 	Number of riparian trees by species
+# 
+# table(FIATree$STREET_TREE_LAB)
+# ###########
+# names(FIATree)
+# ripa <- filter(FIATree, STATUSCD == 1 & RIPARIAN_LAB =="Yes")
+# 
+# ripa <- ripa %>% mutate(DIA_cat = cut(DIA, c(0,5,11,Inf), labels=c("sapling","medium", "large"), right = FALSE))
+# 
+# 
+# 
+# tmp1 <- ripa %>% group_by(COMMON_NAME, DIA_cat, STRATUM_CN, PLT_CN)%>%
+#   summarize(TRE_ADJ = sum(TREE_ADJ),  #sum to plot - sample unit
+#             .groups = 'drop') %>%        
+#   group_by(COMMON_NAME, DIA_cat,STRATUM_CN) %>%
+#   summarize(tre_s = sum(TRE_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+#             tre_s2 = sum(TRE_ADJ^2),  # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)) 
+#             .groups = 'drop')
+# 
+# 
+# tmp1
+# 
+# tmp2 <-  right_join(select(Stratum, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_PLOT_COUNT, STRATUM_WEIGHT, STRATUM_CN), tmp1, by = "STRATUM_CN") %>% # join to POP_STATUM values
+#   mutate(var_tre = ((tre_s2 - STRATUM_PLOT_COUNT * ((tre_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))),
+#          TRE_pop =  ESTN_UNIT_ACRES * STRATUM_WEIGHT * tre_s/ STRATUM_PLOT_COUNT,
+#          TRE_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_tre) +
+#          (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_tre)) # calculate stratum-damage variance
+# tmp2
+# #########
+# 
+# 
+# tmp3 <- tmp2 %>% group_by(COMMON_NAME, DIA_cat) %>% 
+#   summarize(TRE_POP = sum(TRE_pop, na.rm = T),
+#             TRE_VAR = sum(TRE_var, na.rm = T),
+#             .groups = 'drop') %>%
+#   mutate(TRE_STND_ERR = sqrt(TRE_VAR),
+#          TRE_PCT_WHOLE_POP = (TRE_POP/sum(filter(iTreeTree, STATUSCD == 1)$TREES_PER_PLOT))*100) 
+# 
+# tmp3
+# ## Should it be iTreeTree in the last line?   (FIATree and iTreeTree have the same number of live trees.)
+# 
+# 
+# ##############
+# 
+# #---#---#---#---#---#---#---#---#---#---
+# # Total planted trees - for total row
+# 
+# 
+# tmp7 <- ripa %>% group_by(DIA_cat, STRATUM_CN, PLT_CN) %>%
+#   summarize(TRE_ADJ = sum(TREE_ADJ),  #sum to plot - sample unit
+#             .groups = 'drop') %>%        
+#   group_by(DIA_cat,STRATUM_CN) %>%
+#   summarize(tre_s = sum(TRE_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+#             tre_s2 = sum(TRE_ADJ^2),  # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)) 
+#             .groups = 'drop')
+# 
+# tmp7
+# 
+# tmp8 <-  right_join(select(Stratum, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_PLOT_COUNT, STRATUM_WEIGHT, STRATUM_CN), tmp7, by = "STRATUM_CN") %>% # join to POP_STATUM values
+#   mutate(var_tre = ((tre_s2 - STRATUM_PLOT_COUNT * ((tre_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))),
+#          TRE_pop =  ESTN_UNIT_ACRES * STRATUM_WEIGHT * tre_s/ STRATUM_PLOT_COUNT,
+#          TRE_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_tre) +
+#                                                                   (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_tre)) # calculate stratum-damage variance
+# 
+# tmp8
+# 
+# tmp9 <- tmp8 %>% group_by(DIA_cat) %>% 
+#   summarize(TRE_POP = sum(TRE_pop, na.rm = T),
+#             TRE_VAR = sum(TRE_var, na.rm = T),
+#             .groups = 'drop') %>%
+#   mutate(TRE_STND_ERR = sqrt(TRE_VAR),
+#          COMMON_NAME = 'Total',
+#          TRE_PCT_WHOLE_POP = (TRE_POP/sum(filter(FIATree, STATUSCD ==1)$TREES_PER_PLOT))*100) 
+# 
+# 
+# tmp9
+# 
+# tmp3
+# ### now work with tmp3 to get ownerships as columns- pop estimates and standard error
+# tre_pop<-spread(tmp3[ ,c("COMMON_NAME", "DIA_cat","TRE_POP")], "DIA_cat","TRE_POP")
+# tre_stnd_err<-spread(tmp3[ ,c("COMMON_NAME", "DIA_cat","TRE_STND_ERR")], "DIA_cat","TRE_STND_ERR")
+# 
+# tre_pop_tot<-spread(tmp9[ ,c("COMMON_NAME", "DIA_cat","TRE_POP")], "DIA_cat","TRE_POP")
+# tre_stnd_err_tot<-spread(tmp9[ ,c("COMMON_NAME", "DIA_cat","TRE_STND_ERR")], "DIA_cat","TRE_STND_ERR")
+# 
+# 
+# 
+# ## add in the row calulated from 'total' per owner group
+# 
+# tre_pop<-rbind(tre_pop, tre_pop_tot)
+# tre_stnd_err<-rbind(tre_stnd_err, tre_stnd_err_tot)
+# 
+# # bring in the re-named SE columns
+# tre_pop$se_sapling<-tre_stnd_err$sapling
+# tre_pop$se_medium<-tre_stnd_err$medium
+# tre_pop$se_large<-tre_stnd_err$large
+# 
+# #####################################################################
+# 
+# # ripa_diams <- cbind(tre_pop[ ,1],tre_pop[ ,"sapling"], tre_pop[ ,"se_sapling"],tre_pop[ ,"medium"], tre_pop[ ,"se_medium"],tre_pop[ ,"large"], tre_pop[ ,"se_large"])
+# 
+# ripa_diams <- cbind(tre_pop[ ,1],tre_pop[ ,"medium"], tre_pop[ ,"se_medium"],tre_pop[ ,"large"], tre_pop[ ,"se_large"])
+# 
+# ripa_diams[is.na(ripa_diams)] <-0
+# 
+# zer <- dim(ripa_diams)[1]
+# 
+# 
+# ripa_diams$sapling<-rep(0,zer)
+# ripa_diams$se_sapling<-rep(0,zer)
+# # ripa_diams$se_sapling<-format(round(ripa_diams$se_sapling, digits=0), big.mark=",")
+# 
+# ripa_diams$medium<-format(round(ripa_diams$medium, digits=0),  big.mark=",")
+# ripa_diams$se_medium<-format(round(ripa_diams$se_medium, digits=0),  big.mark=",")
+# 
+# ripa_diams$large<-format(round(ripa_diams$large, digits=0),  big.mark=",")
+# ripa_diams$se_large<-format(round(ripa_diams$se_large, digits=0),  big.mark=",")
+# 
+# 
+# ripa_diams<-ripa_diams[ ,c("COMMON_NAME","sapling","se_sapling","medium","se_medium","large","se_large")]
+# 
+# a <- nrow(ripa_diams)
+# 
+# timr<-  kable(ripa_diams, format = "html",
+#               booktabs = TRUE,
+#               #     digits =c(0,0,0,1),
+#               # caption = tab. _cap,
+#               col.names = (c("FIA land use","1-4.9 in. diameter trees (number)","Standard error",
+#                              "5-10.9 in. diameter trees (number)","Standard error",
+#                              "11+ in. diameter trees (number)","Standard error")),
+#               align = c("l","r", "r", "r","r", "r", "r"),
+#               #  format.args = list(big.mark = ','),
+#               linesep = "") %>%
+#   kable_styling(latex_options="HOLD_position")%>%
+#   row_spec(0, bold=TRUE) %>%
+#   row_spec(a, bold=TRUE) %>%
+#   footnote(general = c("Due to rounding, not all values will add up exactly."), general_title = "", threeparttable = TRUE)
+# 
+# timr
+
+
+
+
+
+
+
+
+
+#################
+
+# names(FIATree)
+# street_lu <- filter(FIATree, STATUSCD == 1 & STREET_TREE_LAB =="Yes")
+# 
+# street_lu <- street_lu %>% mutate(DIA_cat = cut(DIA, c(0,5,11,Inf), labels=c("sapling","medium", "large"), right = FALSE))
+# 
+# 
+# 
+# tmp1 <- street_lu %>% group_by(LAND_USE, DIA_cat, STRATUM_CN, PLT_CN)%>%
+#   summarize(TRE_ADJ = sum(TREE_ADJ),  #sum to plot - sample unit
+#             .groups = 'drop') %>%        
+#   group_by(LAND_USE, DIA_cat,STRATUM_CN) %>%
+#   summarize(tre_s = sum(TRE_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+#             tre_s2 = sum(TRE_ADJ^2),  # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)) 
+#             .groups = 'drop')
+# 
+# 
+# tmp1
+# 
+# tmp2 <-  right_join(select(Stratum, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_PLOT_COUNT, STRATUM_WEIGHT, STRATUM_CN), tmp1, by = "STRATUM_CN") %>% # join to POP_STATUM values
+#   mutate(var_tre = ((tre_s2 - STRATUM_PLOT_COUNT * ((tre_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))),
+#          TRE_pop =  ESTN_UNIT_ACRES * STRATUM_WEIGHT * tre_s/ STRATUM_PLOT_COUNT,
+#          TRE_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_tre) +
+#                                                                   (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_tre)) # calculate stratum-damage variance
+# tmp2
+# #########
+# 
+# 
+# tmp3 <- tmp2 %>% group_by(LAND_USE, DIA_cat) %>% 
+#   summarize(TRE_POP = sum(TRE_pop, na.rm = T),
+#             TRE_VAR = sum(TRE_var, na.rm = T),
+#             .groups = 'drop') %>%
+#   mutate(TRE_STND_ERR = sqrt(TRE_VAR),
+#          TRE_PCT_WHOLE_POP = (TRE_POP/sum(filter(iTreeTree, STATUSCD == 1)$TREES_PER_PLOT))*100) 
+# 
+# tmp3
+# ## Should it be iTreeTree in the last line?   (FIATree and iTreeTree have the same number of live trees.)
+# 
+# 
+# ##############
+# 
+# #---#---#---#---#---#---#---#---#---#---
+# # Total planted trees - for total row
+# 
+# street_lu$DIA_cat
+# street_lu$LAND_USE
+# 
+# 
+# tmp7 <- street_lu %>% group_by(DIA_cat, STRATUM_CN, PLT_CN) %>%
+#   summarize(TRE_ADJ = sum(TREE_ADJ),  #sum to plot - sample unit
+#             .groups = 'drop') %>%        
+#   group_by(DIA_cat,STRATUM_CN) %>%
+#   summarize(tre_s = sum(TRE_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+#             tre_s2 = sum(TRE_ADJ^2),  # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)) 
+#             .groups = 'drop')
+# 
+# tmp7
+# 
+# tmp8 <-  right_join(select(Stratum, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_PLOT_COUNT, STRATUM_WEIGHT, STRATUM_CN), tmp7, by = "STRATUM_CN") %>% # join to POP_STATUM values
+#   mutate(var_tre = ((tre_s2 - STRATUM_PLOT_COUNT * ((tre_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))),
+#          TRE_pop =  ESTN_UNIT_ACRES * STRATUM_WEIGHT * tre_s/ STRATUM_PLOT_COUNT,
+#          TRE_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_tre) +
+#                                                                   (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_tre)) # calculate stratum-damage variance
+# 
+# tmp8
+# 
+# tmp9 <- tmp8 %>% group_by(DIA_cat) %>% 
+#   summarize(TRE_POP = sum(TRE_pop, na.rm = T),
+#             TRE_VAR = sum(TRE_var, na.rm = T),
+#             .groups = 'drop') %>%
+#   mutate(TRE_STND_ERR = sqrt(TRE_VAR),
+#          LAND_USE = 'Total',
+#          TRE_PCT_WHOLE_POP = (TRE_POP/sum(filter(FIATree, STATUSCD ==1)$TREES_PER_PLOT))*100) 
+# 
+# 
+# 
+# 
+# ### now work with tmp3 to get ownerships as columns- pop estimates and standard error
+# tre_pop<-spread(tmp3[ ,c("LAND_USE", "DIA_cat","TRE_POP")], "DIA_cat","TRE_POP")
+# tre_stnd_err<-spread(tmp3[ ,c("LAND_USE", "DIA_cat","TRE_STND_ERR")], "DIA_cat","TRE_STND_ERR")
+# 
+# tre_pop_tot<-spread(tmp9[ ,c("LAND_USE", "DIA_cat","TRE_POP")], "DIA_cat","TRE_POP")
+# tre_stnd_err_tot<-spread(tmp9[ ,c("LAND_USE", "DIA_cat","TRE_STND_ERR")], "DIA_cat","TRE_STND_ERR")
+# 
+# 
+# 
+# ## add in the row calulated from 'total' per owner group
+# tre_pop<-rbind(tre_pop, tre_pop_tot)
+# tre_stnd_err<-rbind(tre_stnd_err, tre_stnd_err_tot)
+# 
+# # bring in the re-named SE columns
+# tre_pop$se_sapling<-tre_stnd_err$sapling
+# tre_pop$se_medium<-tre_stnd_err$medium
+# tre_pop$se_large<-tre_stnd_err$large
+# 
+# tre_pop
+# 
+# stree_tree_landuse <- cbind(tre_pop[ ,1],tre_pop[ ,"sapling"], tre_pop[ ,"se_sapling"],tre_pop[ ,"medium"], tre_pop[ ,"se_medium"],tre_pop[ ,"large"], tre_pop[ ,"se_large"])
+# 
+# 
+# stree_tree_landuse$sapling<-format(round(stree_tree_landuse$sapling, digits=0), big.mark=",")
+# stree_tree_landuse$se_sapling<-format(round(stree_tree_landuse$se_sapling, digits=0), big.mark=",")
+# 
+# stree_tree_landuse$medium<-format(round(stree_tree_landuse$medium, digits=0),  big.mark=",")
+# stree_tree_landuse$se_medium<-format(round(stree_tree_landuse$se_medium, digits=0),  big.mark=",")
+# 
+# stree_tree_landuse$large<-format(round(stree_tree_landuse$large, digits=0),  big.mark=",")
+# stree_tree_landuse$se_large<-format(round(stree_tree_landuse$se_large, digits=0),  big.mark=",")
+# 
+# 
+# a <- nrow(stree_tree_landuse)
+# tims<-  kable(stree_tree_landuse, format = "html",
+#               booktabs = TRUE,
+#               #     digits =c(0,0,0,1),
+#               # caption = tab. _cap,
+#               col.names = (c("FIA land use","1-4.9 in. diameter trees (number)","Standard error",
+#                              "5-10.9 in. diameter trees (number)","Standard error",
+#                              "11+ in. diameter trees (number)","Standard error")),
+#               align = c("l","r", "r", "r","r", "r", "r"),
+#               #  format.args = list(big.mark = ','),
+#               linesep = "") %>%
+#   kable_styling(latex_options="HOLD_position")%>%
+#   row_spec(0, bold=TRUE) %>%
+#   row_spec(a, bold=TRUE) %>%
+#   footnote(general = c("Due to rounding, not all values will add up exactly."), general_title = "", threeparttable = TRUE)
+# 
+# tims
+
+

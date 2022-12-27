@@ -461,7 +461,7 @@ f6<-ggarrange(gChl, gcarot,common.legend=T, ncol=2, legend="bottom")
 f6
 
 dpi=300    #pixels per square inch
-tiff("Fig_46_sm_crown_11_27_2022.tif", width=10*dpi, height=5*dpi, res=dpi)
+tiff("Fig_6_sm_crown_11_27_2022.tif", width=10*dpi, height=5*dpi, res=dpi)
 f6
 dev.off()
 

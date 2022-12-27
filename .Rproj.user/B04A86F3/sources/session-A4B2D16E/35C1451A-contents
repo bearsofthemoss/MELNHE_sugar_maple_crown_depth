@@ -1,0 +1,3856 @@
+---
+title: "Review table template"
+author: "Alex Young"
+date: "`r format(Sys.time(), '%m/%d/%y')`"
+output: html_document
+---
+
+
+```{r Project, include = T, echo=FALSE, warning = FALSE, message = FALSE}
+
+#***************************************************
+#This report
+#***************************************************
+city_name <- "Washington"
+state_name <- "DC"
+report_year <- "2019"
+state_name_full <- "district of columbia"
+
+title <- paste(city_name, ", ", state_name, " ", report_year, " ", "Final Report Tables", sep = "")
+
+#load libraries
+library(ggplot2) 
+library(scales)
+library(ggmap)
+library(plyr) 
+library(dplyr)
+library(tidyr)
+library(knitr)
+library(kableExtra)
+
+# load data
+   load("C:\\Users\\bears\\Desktop\\WashingtonDC_2019_Certification_tables_figures_2020_2021_update.Rdata")
+   # load("C:\\Users\\bears\\Desktop\\WashingtonDC_2019_Certification_tables_figures.Rdata")
+
+FIATree <- FIATree %>% mutate(DIA_cat = cut(DIA, c(0,5,11,Inf), labels=c("sapling","medium", "large"), right = FALSE))   
+
+Landuse <- Landuse %>% mutate(LAND_USE_10 = revalue(LAND_USE_UNGROUPED, c("Forest Land" = "Forest land", "Cropland" = "Agriculture", "Pasture" = "Agriculture", "IdleFarmland" = "Agriculture", "Orchard" = "Agriculture", "ChristmasPlantation" = "Agriculture", "WildlifeOpening" = "Agriculture", "Windbreak" = "Agriculture", "NonforestChaparral" = "Rangeland/Chaparral", "Rangeland" = "Rangeland/Chaparral", "Commercial" = "Commercial/Industrial", "Cultural" = "Commercial/Industrial",  "Developed" = "Commercial/Industrial", "Institutional" = "Commercial/Industrial", "MiningWasteland" = "Commercial/Industrial", "Multi-family" = "Multi-family residential", "Recreation" = "Recreation/Cemetery", "Cemetery" = "Recreation/Cemetery", "Park" = "Recreation/Cemetery", "GolfCourse" = "Recreation/Cemetery", "Transportation" = "Rights-of-way", "Utility" = "Rights-of-way", "Other" = "Natural lands", "Nonvegetated" = "Natural lands", "Wetland" = "Natural lands", "Beach" = "Natural lands")))
+
+
+# Order the landuse levels
+Landuse$LAND_USE_10 <- ordered(Landuse$LAND_USE_10, levels = c("Forest land", "Agriculture", "Rangeland/Chaparral", "Commercial/Industrial", "Multi-family residential", "Residential", "Recreation/Cemetery", "Rights-of-way", "Natural lands", "Water"))
+
+
+
+
+   
+   
+
+# Outside values from references
+runoff.dollar.value <- 0.008936 # $0.008936 per gallon of runoff avoided
+carb.dollar.value <- 188 # $188 per **metric** ton of carbon 
+
+# Figure themes
+theme_Publication<-function(base_size=12,base_family="sans"){
+  library(grid)
+  library(ggthemes)
+  (theme_foundation(base_size=base_size, base_family=base_family)+
+      theme(plot.title=element_text(face="bold", size=rel(1.2),hjust=0.5),
+            text=element_text(),
+            panel.background = element_rect(color = NA),
+            plot.background = element_rect(color = NA),
+            panel.border = element_rect(color = NA),
+            axis.title = element_text(face = "bold", size=rel(1)),
+            axis.title.y = element_text(angle=90, vjust = 2),
+            axis.title.x = element_text(vjust=-0.2),
+            axis.text=element_text(),
+            axis.line = element_line(color="black"),
+            axis.ticks = element_line(),
+            panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank(),
+            legend.key = element_rect(color = NA),
+            legend.position = "bottom",
+            legend.direction = "horizontal",
+            legend.key.size = unit(0.2,"cm"),
+            legend.spacing = unit(0,"cm"),
+            legend.title = element_text(face="italic"),
+            plot.margin = unit(c(10,5,5,5),"mm"),
+            strip.background = element_rect(color="#f0f0f0",fill="#f0f0f0"),
+            strip.text = element_text(face="bold")
+      )
+  )
+}
+
+theme_map <- function(...) {
+  theme_minimal() +
+  theme(
+    #text = element_text(family = "Ubuntu Regular", color = "#22211d"),
+    axis.line = element_blank(),
+    axis.text.x = element_blank(),
+    axis.text.y = element_blank(),
+    axis.ticks = element_blank(),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    # panel.grid.minor = element_line(color = "#ebebe5", size = 0.2),
+    panel.grid.major = element_line(color = "#ebebe5", size = 0.2),
+    panel.grid.minor = element_blank(),
+    plot.background = element_rect(fill = NA, color = NA), 
+    panel.background = element_rect(fill = NA, color = NA), 
+    legend.background = element_rect(fill = NA, color = NA),
+    panel.border = element_blank(),
+    ...
+  )
+}
+
+
+
+```
+
+
+## Table 1: Summary of the urban forest estimates, `r city_name`, `r report_year`
+
+```{r Table 1:Executive summary, echo=FALSE, warning=FALSE, message=FALSE, error=FALSE}
+#---#---#---#---#---#---#---#---#---#---
+# SECTION I: Number of live trees
+
+# Calculation of SE for Tree counts
+
+
+a <- filter(iTreeTree, iTreeTree$STATUSCD == 1 & iTreeTree$DIA >= 5.0)
+b <- filter(iTreeTree, iTreeTree$STATUSCD == 1 & iTreeTree$DIA < 5.0)
+live.tree.num <- (sum(a$TREES_PER_PLOT))
+live.sap.num <- (sum(b$TREES_PER_PLOT))
+#rm(a,b)
+
+#---#---#---#---#---#---#---#---#---#---
+# Calculation of SE for Tree counts
+
+# All live trees (trees and saplings)
+a <- filter(iTreeTree, STATUSCD == 1) 
+
+tmp1 <-  a %>% 
+          group_by(STRATUM_LABEL, STRATUM_CN, PLT_CN) %>%
+          summarize(tre_ADJ = sum(TRE_ADJ), .groups = 'drop') %>%
+          group_by(STRATUM_LABEL, STRATUM_CN) %>%
+          summarize(TRE_s = sum(tre_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+          TRE_s2 = sum(tre_ADJ^2),
+          .groups = 'drop') # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)
+
+tmp2 <- full_join(Stratum, tmp1, by = "STRATUM_CN") %>%   # join to POP_STRATUM values
+  mutate(var_s = ((TRE_s2 - STRATUM_PLOT_COUNT * ((TRE_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))),
+          TRE_pop = ESTN_UNIT_ACRES * STRATUM_WEIGHT * TRE_s/ STRATUM_PLOT_COUNT,
+          TRE_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_s) +
+           (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_s))  #calculate stratum variance v(P_hd) eq4.4
+
+tmp3 <- tmp2 %>%
+            group_by(EVALID) %>% #(EVALID = evaluation)
+            summarize(TRE_POP = sum(TRE_pop, na.rm = T),
+                      TRE_VAR = sum(TRE_var, na.rm = T), 
+                      .groups = 'drop') %>%
+            mutate(STND_ERR = sqrt(TRE_VAR))
+
+t.live.num <- (tmp3$TRE_POP) # Standard error for all live trees (saplings and trees)  
+t.live.SE <- (tmp3$STND_ERR)
+rm(a, tmp1, tmp2, tmp3)
+
+# All live trees (DIA >= 5.0)
+a <- filter(iTreeTree, iTreeTree$STATUSCD == 1 & iTreeTree$DIA >= 5.0)
+
+tmp1 <-  a %>% 
+          group_by(STRATUM_LABEL, STRATUM_CN, PLT_CN) %>%
+          summarize(tre_ADJ = sum(TRE_ADJ), .groups = 'drop') %>%
+          group_by(STRATUM_LABEL, STRATUM_CN) %>%
+          summarize(TRE_s = sum(tre_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+          TRE_s2 = sum(tre_ADJ^2),
+          .groups = 'drop') # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)
+          
+
+tmp2 <- full_join(Stratum, tmp1, by = "STRATUM_CN") %>%                    # join to POP_STRATUM values
+  mutate(var_s = ((TRE_s2 - STRATUM_PLOT_COUNT * ((TRE_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))),
+      TRE_pop = ESTN_UNIT_ACRES * STRATUM_WEIGHT * TRE_s/ STRATUM_PLOT_COUNT,
+      TRE_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_s) +
+           (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_s))  #calculate stratum variance v(P_hd) eq4.4
+
+tmp3 <- tmp2 %>%
+            group_by(EVALID) %>% #(EVALID = evaluation)
+            summarize(TRE_POP = sum(TRE_pop, na.rm = T),
+                      TRE_VAR = sum(TRE_var, na.rm = T), 
+                      .groups = 'drop') %>%
+            mutate(STND_ERR = sqrt(TRE_VAR))
+
+t.live.tree.SE <- (tmp3$STND_ERR) # Standard error for all live trees in 
+rm(a, tmp1, tmp2, tmp3)
+
+# All live trees (DIA < 5.0)
+a <- filter(iTreeTree, iTreeTree$STATUSCD == 1 & iTreeTree$DIA < 5.0)
+
+tmp1 <-  a %>% 
+          group_by(STRATUM_LABEL, STRATUM_CN, PLT_CN) %>%
+          summarize(tre_ADJ = sum(TRE_ADJ), .groups = 'drop') %>%
+          group_by(STRATUM_LABEL, STRATUM_CN) %>%
+          summarize(TRE_s = sum(tre_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+          TRE_s2 = sum(tre_ADJ^2), .groups = 'drop') # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)
+
+
+tmp2 <- full_join(Stratum, tmp1, by = "STRATUM_CN") %>%                    # join to POP_STRATUM values
+  mutate(var_s = ((TRE_s2 - STRATUM_PLOT_COUNT * ((TRE_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))),
+      TRE_pop = ESTN_UNIT_ACRES * STRATUM_WEIGHT * TRE_s/ STRATUM_PLOT_COUNT,
+      TRE_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_s) +
+           (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_s))  #calculate stratum variance v(P_hd) eq4.4
+
+tmp3 <- tmp2 %>%
+            group_by(EVALID) %>% #(EVALID = evaluation)
+            summarize(TRE_POP = sum(TRE_pop, na.rm = T),
+                      TRE_VAR = sum(TRE_var, na.rm = T), 
+                      .groups = 'drop') %>%
+            mutate(STND_ERR = sqrt(TRE_VAR))
+
+t.live.sap.SE <- (tmp3$STND_ERR) # Standard error for all live saplings in San Diego 
+rm(a, tmp1, tmp2, tmp3)
+
+# Dead trees (DIA >= 5.0)
+#filter out dead and down (STANDING_DEAD_CD = 0)
+
+a <- filter(iTreeTree, STATUSCD == 2 & (STANDING_DEAD_CD == 1 | is.na(STANDING_DEAD_CD)) & DIA  >= 5.0) 
+
+tmp1 <-  a %>% 
+          group_by(STRATUM_LABEL, STRATUM_CN, PLT_CN) %>%
+          summarize(tre_AJD = sum(TRE_ADJ), .groups = 'drop') %>%
+          group_by(STRATUM_LABEL, STRATUM_CN) %>%
+          summarize(TRE_s = sum(tre_AJD), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+          TRE_s2 = sum(tre_AJD^2), .groups = 'drop')  # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)
+
+tmp2 <- full_join(Stratum, tmp1, by = "STRATUM_CN") %>%                    # join to POP_STRATUM values
+  mutate(var_s = ((TRE_s2 - STRATUM_PLOT_COUNT * ((TRE_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))),
+      TRE_pop = ESTN_UNIT_ACRES * STRATUM_WEIGHT * TRE_s/ STRATUM_PLOT_COUNT,
+      TRE_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_s) +
+           (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_s))  #calculate stratum variance v(P_hd) eq4.4
+
+tmp3 <- tmp2 %>%
+            group_by(EVALID) %>% #(EVALID = evaluation)
+            summarize(TRE_POP = sum(TRE_pop, na.rm = T),
+                      TRE_VAR = sum(TRE_var, na.rm = T), 
+                      .groups = 'drop') %>%
+            mutate(STND_ERR = sqrt(TRE_VAR))
+
+t.dead.tree.num <- (tmp3$TRE_POP)
+t.dead.tree.SE <- (tmp3$STND_ERR) # Standard error for all dead trees in San Diego 
+rm(a, tmp1, tmp2, tmp3)
+
+# Dead saplings (DIA < 5.0)
+#filter out dead and down (STANDING_DEAD_CD = 0)
+
+a <- filter(iTreeTree, STATUSCD == 2 & (STANDING_DEAD_CD == 1 | is.na(STANDING_DEAD_CD)) & DIA  < 5.0) 
+
+tmp1 <-  a %>% 
+          group_by(STRATUM_LABEL,STRATUM_CN, PLT_CN) %>%
+          summarize(tre_ADJ = sum(TRE_ADJ), .groups = 'drop') %>%
+          group_by(STRATUM_LABEL, STRATUM_CN) %>%
+          summarize(TRE_s = sum(tre_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+          TRE_s2 = sum(tre_ADJ^2), .groups = 'drop') # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)
+
+tmp2 <- full_join(Stratum, tmp1, by = "STRATUM_CN") %>%                    # join to POP_STRATUM values
+  mutate(var_s = ((TRE_s2 - STRATUM_PLOT_COUNT * ((TRE_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))),
+      TRE_pop = ESTN_UNIT_ACRES * STRATUM_WEIGHT * TRE_s/ STRATUM_PLOT_COUNT,
+      TRE_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_s) +
+           (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_s))  #calculate stratum variance v(P_hd) eq4.4
+
+tmp3 <- tmp2 %>%
+            group_by(EVALID) %>% #(EVALID = evaluation)
+            summarize(TRE_POP = sum(TRE_pop, na.rm = T),
+                      TRE_VAR = sum(TRE_var, na.rm = T), 
+                      .groups = 'drop') %>%
+            mutate(STND_ERR = sqrt(TRE_VAR))
+
+t.dead.sap.num <- (tmp3$TRE_POP)
+t.dead.sap.SE <- (tmp3$STND_ERR) # Standard error for all dead saplings in San Diego 
+rm(a, tmp1, tmp2, tmp3)
+
+
+# 1) Total live trees (saplings + trees)
+#t.live.SE
+t.live.c <- paste(format(round(t.live.num, digits=0), big.mark=","), " (", format(round( t.live.SE, digits=0), big.mark=","), "), ^b^", sep = "")
+rm(t.live.num, t.live.SE)
+
+# 2) Total live saplings
+t.live.sap.c <- paste(format(round(live.sap.num, digits=0), big.mark=","), " (", format(round(t.live.sap.SE, digits=0), big.mark=","), "), ^b^", sep = "")
+rm(live.sap.num, t.live.sap.SE)
+
+# 3) Total live trees
+t.live.tree.c <- paste(format(round(live.tree.num, digits=0), big.mark=","), " (", format(round(t.live.tree.SE, digits=0), big.mark=","), "), ^b^", sep = "")
+rm(live.tree.num, t.live.tree.SE)
+
+# 4) Dead saplings
+t.dead.sap.c <- paste(format(round(t.dead.sap.num, digits=0), big.mark=","), " (", format(round(t.dead.sap.SE, digits=0), big.mark=","), "), ^b^", sep = "")
+rm(t.dead.sap.num, t.dead.sap.SE)
+
+# 5) Dead trees
+t.dead.tree.c <- paste(format(round(t.dead.tree.num, digits=0), big.mark=","), " (", format(round(t.dead.tree.SE, digits=0), big.mark=","), "), ^b^", sep = "")
+rm(t.dead.tree.num, t.dead.tree.SE)
+
+#---#---#---#---#---#---#---#---#---#---
+# SECTION II: Most Abundant Species By
+
+#1) Number of live trees
+tmp1 <- filter(FIATree, STATUSCD ==1) %>% group_by(SPCD,COMMON_NAME) %>% summarize(TRE_CNT = sum(TREES_PER_PLOT), .groups = 'drop') %>% arrange(desc(TRE_CNT))
+abundant.live.species <- as.character(tmp1$COMMON_NAME[1])
+rm(tmp1)
+
+
+#2) Species with greatest leaf area
+tmp1 <- filter(iTreeTree, STATUSCD ==1) %>% group_by(SPCD,COMMON_NAME) %>% summarize(LA = sum(POP_LEAF_AREA), .groups = 'drop') %>% arrange(desc(LA))
+la.live.spp <- as.character(tmp1$COMMON_NAME[1])
+rm(tmp1)
+
+
+##################################################################################
+
+#---#---#---#---#---#---#---#---#---#---
+# SECTION III: Ecosystem Services
+
+# 1) Pollution removal
+#a<-PollRemoval[order(-PollRemoval$TONS_REMOVED),]      
+tot.poll.rem<-sum(PollRemoval$TONS_REMOVED)
+t.tot.poll.rem <- paste(format(round(tot.poll.rem, digits=0), big.mark=","), "tons/year", sep = " ")
+rm(tot.poll.rem)
+
+#For San Diego, we need to do a special case for pollution removal value
+# old iTree models pollution removal data (fs_unims.mod_pollution_removal) does not
+# match the values associated  with reduced health incidents
+# (fs_unims.mod_pollution_health_fctr), but in newer iTree models
+# these values are the same. Here we will use the values from iTreeHealth,
+# and add in pollution removal for CO from iTreePlltnRmvl
+a <- filter(PollRemoval, POLLUTANT == 'CO')
+tot.poll.val<-((sum(HealthFactor$VALUE) + a$DOLLAR_VALUE)) 
+t.tot.poll.val <-  paste("($", format(round(tot.poll.val, digits=0), big.mark=","), "/year)", sep = "")
+rm(a, tot.poll.val)
+
+t.tot.poll.c <- paste(t.tot.poll.rem, t.tot.poll.val, sept = " ")
+rm(t.tot.poll.rem, t.tot.poll.val)
+
+# 2) Cases of acute respiratory illness
+a <- filter(HealthFactor, HEALTH_FACTOR == 'Acute Respiratory Symptoms')
+ars.incidence <- (sum(a$INCIDENCE))
+ars.incidence2 <- paste(format(round(ars.incidence, digits=0), big.mark=","), "cases/year", sep = " ")
+
+ars.value <- (sum(a$VALUE))
+ars.value2 <- paste("($", format(round(ars.value, digits=0), big.mark=","), "/year)", sep = "")
+acuteResp <- paste(ars.incidence2, ars.value2, sep = " ")
+
+rm(a, ars.incidence, ars.incidence2, ars.value, ars.value2)
+
+# 3) VOC emissions
+a <- (((sum(VOC$ISOPRENE_LBS) + sum(VOC$MONOTERPENE_LBS)) / 2000))
+voc.es <- paste(a, "tons/year")
+rm(a)
+
+# 4) Runoff Avoided 
+
+runoff.es <- (RainRunoff$RUNOFF_CF)
+ro.value <- ((RainRunoff$RUNOFF_CF * 7.48052) * runoff.dollar.value) # 1cubic foot = 7.48052 gallons
+avoided.ro.es <- paste(format(round(runoff.es, digits=0), big.mark=","), "cubic feet",paste0("($", format(round(ro.value, digits=0), big.mark = ","),"/year)"))
+
+rm(runoff.es, ro.value)
+
+# 5) Carbon storage
+#live and dead trees
+# dead and down trees carbon storage is NA
+
+carb.stor.tons <- (sum(FIATree$POP_C_STORAGE_LBS, na.rm = T)/2000) # convert to tons
+
+carb.stor.dollar <- ((sum(FIATree$POP_C_STORAGE_LBS, na.rm = T)/2204.6) * carb.dollar.value) #convert to metric ton (2204.6 lbs = metric ton); value of carbon in metric tons 
+
+t.carb.stor.tons <- paste(format(round(carb.stor.tons, digits=0), big.mark=","), "tons", sep = " ")
+t.carb.stor.dollar <- paste("($", format(round(carb.stor.dollar, digits=0), big.mark=","), ")", sep = "")
+t.carb.stor.c <- paste(t.carb.stor.tons, t.carb.stor.dollar, sep = " ")
+
+rm(t.carb.stor.tons, carb.stor.tons, t.carb.stor.dollar, carb.stor.dollar)
+
+# 6) Carbon sequestered
+# live trees - dead (including dead and down) have sequestration values = 0
+
+carb.seq.tons <- (sum(filter(FIATree, STATUSCD ==1)$POP_C_SEQUEST_LBS)/2000) # convert to tons
+
+carb.seq.dollars <- (sum(filter(FIATree, STATUSCD ==1)$POP_C_SEQUEST_LBS)/2204.6 * carb.dollar.value) #convert to metric ton (2204.6 lbs = metric ton); value of carbon in metric tons
+             
+t.carb.seq.tons <- paste(format(round(carb.seq.tons, digits=0), big.mark=","), "tons/year", sep = " ")
+t.carb.seq.dollar <- paste("($", format(round(carb.seq.dollars, digits=0), big.mark=","), "/year)", sep = "")
+t.carb.seq.c <- paste(t.carb.seq.tons, t.carb.seq.dollar, sep = " ")      
+
+rm(t.carb.seq.tons, carb.seq.tons, t.carb.seq.dollar, carb.seq.dollars)
+
+# 7) Net aboveground volume
+# live trees
+
+net.vol.cf <- (sum(filter(FIATree, STATUSCD ==1 & DIA >= 5.0)$POP_CF_NET_VOLUME, na.rm = T))
+t.net.vol <- paste(format(round(net.vol.cf, digits=0), big.mark=","), "cubic feet")
+rm(net.vol.cf)
+
+# 8) Reduced building energy use
+# live and dead trees
+# dead and down have values = 0 
+
+#convert energy units into gigajoules
+#No saplings
+# 1 GJ = 947,817 BTU
+#1 GJ = 277.778 kWh
+
+electricGJ <- sum(filter(iTreeTree, DIA >= 5.0)$POP_ELEC_AVOID_KWH)/ 277.778  #remove dead and down trees
+fuelGJ <- sum(filter(iTreeTree, DIA >= 5.0)$POP_FUEL_AVOID_BTU)/ 947817 # remove dead and down trees
+enrg.total.GJ <- paste(format(round((sum(electricGJ + fuelGJ)), digits=0), big.mark=",") , "GJ/year")
+
+enrg.total.usd <- paste("($", format(round((sum(filter(iTreeTree, DIA >= 5.0)$POP_ELEC_AVOID_USD + filter(iTreeTree, DIA >= 5.0)$POP_FUEL_AVOID_USD)), digits=0), big.mark=","), "/year)", sep = "") # remove dead and down trees
+
+reduced.enrg.build <- paste(enrg.total.GJ, enrg.total.usd)
+
+
+rm(electricGJ, fuelGJ, enrg.total.GJ, enrg.total.usd)
+
+# 9) Reduced carbon emissions
+#live and dead trees
+# dead and down have values = 0 
+# No saplings
+
+# convert lbs of CO2 to tons (/2000) of C (/3.667)
+enrg.carbon.tons <- paste(format(round((sum(filter(iTreeTree, DIA >= 5.0)$POP_CARBON_AVOID_LBS)/(2000*3.667)), digits=0), big.mark=","), "tons/year", sep = " ") # remove dead and down trees
+
+enrg.carbon.usd <- paste("($", format(round( (sum(filter(iTreeTree, DIA >= 5.0)$POP_CARBON_AVOID_USD)), digits=0), big.mark=","), "/year)", sep = "") # remove dead and down trees
+
+enrg.carbon.es <- paste(enrg.carbon.tons, enrg.carbon.usd, sep = " ")
+
+rm(enrg.carbon.tons, enrg.carbon.usd)
+
+
+# 10) Compensatory value
+#live trees
+
+a <- sum(filter(iTreeTree, STATUSCD ==1)$POP_COMPENSATORY_VALUE)
+text <- paste("$", format(round(a, digits = 1), big.mark=","), sep="")
+comp.value <- text
+
+##################################################################################
+
+
+
+#---#---#---#---#---#---#---#---#---#---
+
+highlightstab <- data.frame(Feature = c("Total live trees", "Live saplings (1 to 4.9 inches in diameter)", "Live trees (at least 5.0 inches in diameter)", "Standing dead saplings (1 to 4.9 inches in diameter)", "Standing dead trees (at least 5.0 inches in diameter)", "Number of live trees", "Leaf area",  "Pollution removal", "Reduction in Acute Respiratory Symptoms", "VOC emissions", "Avoided runoff", "Carbon storage ^c^", "Carbon sequestration ^c^", "Net aboveground volume", "Reduced building energy use ^c^, ^d^" , "Reduced carbon emissions ^c^, ^d^", "Compensatory value"), Estimates = c(t.live.c, t.live.sap.c, t.live.tree.c, t.dead.sap.c, t.dead.tree.c, abundant.live.species, la.live.spp, t.tot.poll.c, acuteResp, voc.es, avoided.ro.es, t.carb.stor.c, t.carb.seq.c, t.net.vol, reduced.enrg.build, enrg.carbon.es, comp.value))
+
+tim1<- kable(highlightstab, format = "html",
+       booktabs = TRUE,
+       escape = FALSE,
+       digits= 0,
+  # caption=tab.1_cap,
+       col.names = c("Feature", "Estimate"),
+       format.args = list(big.mark = ','),
+       align=c("l", "l"),
+       linesep="") %>%
+   kable_styling(latex_options="HOLD_position") %>%
+   row_spec(0, bold = TRUE)%>%
+  kableExtra::group_rows(paste("Number of trees ^a^" ), 1, 5, bold = FALSE, escape=FALSE)%>%
+  kableExtra::group_rows("Most abundant species by:", 6,7, bold = FALSE) %>%
+  kableExtra::group_rows("Ecosystem Services", 8, 17, bold = FALSE) %>%
+  footnote(general =  c("Due to rounding, not all values will add up exactly.", "VOC = volatile organic compound.", "Ton = short ton (U.S.) (2,000 lbs.).",  "To convert carbon estimates to CO~2~, multiply carbon value by 3.667.", "GJ = gigajoule (one billion (10^9^) joules)."), alphabet= c ("Diameter measurements were taken at breast height (d.b.h) or root collar (d.r.c.) for woodland species.", "Standard error.", "Estimates are for the live and dead tree population. All other estimates are based on the live tree population only, except where noted.", "Estimates are calculated using trees greater than or equal to 5 inches in diameter."), escape = FALSE, general_title = "", threeparttable = TRUE)
+
+
+tim1
+
+
+
+rm(t.dead.sap.c, t.dead.tree.c, t.live.c, t.live.sap.c, t.live.tree.c, abundant.live.species, la.live.spp, t.tot.poll.c, acuteResp, voc.es, avoided.ro.es, t.carb.stor.c, t.carb.seq.c, t.net.vol, enrg.carbon.es, comp.value)
+
+
+```
+
+## Figure 1: Study area and approximate plot locations for the Urban FIA inventory of `r city_name`, `r report_year`. Matp tiles by Stamen Design, under CC BY 3.0
+
+
+```{r Figure 1 Map of study area, map of plots, echo=FALSE, warning=FALSE, message=FALSE, error=FALSE, include=TRUE}
+# 
+# library(ggplot2)
+# theme_set(theme_bw())
+# library(sf)
+# library("rnaturalearth")
+# library("rnaturalearthdata")
+# library(maps)
+# library(ggspatial)
+# library(ggmap)
+# 
+# 
+# 
+# # usingstamen map grab the states around city
+# height <- max(PlotLatLong$LAT) - min(PlotLatLong$LAT)
+# width <- max(PlotLatLong$LON) - min(PlotLatLong$LON)
+# 
+# city_borders <- c(bottom  = min(PlotLatLong$LAT)  - 0.5 * height,
+#                  top     = max(PlotLatLong$LAT)  + 0.5 * height,
+#                  left    = min(PlotLatLong$LON) - 0.5 * width,
+#                  right   = max(PlotLatLong$LON) + 0.5 * width)
+# # 
+# # 
+# # cbsa_borders <- c(bottom  = min(PlotLatLong$LAT)  - 7 * height, 
+# #                   top     = max(PlotLatLong$LAT)  + 7 * height,
+# #                   left    = min(PlotLatLong$LON) - 7 * width,
+# #                   right   = max(PlotLatLong$LON) + 7 * width)
+# 
+# 
+# 
+# 
+# est.unit.map <- get_stamenmap(city_borders, zoom = 11, maptype = "toner-lite")
+# 
+# a<-ggmap(est.unit.map)+
+#     geom_polygon(data=fortify(city_bound),
+#                  aes(long, lat, group=group), fill="red",colour="black", alpha=.2)
+# 
+# a
+# 
+# 
+# 
+#     
+#   map <- get_stamenmap(city_borders, zoom = 11, maptype = "terrain")
+#     
+#     b<-ggmap(map)+
+#   geom_point(data=PlotLatLong, aes(x=LON, y=LAT, col=SAMPLE_RESPONSE), size=5, alpha=.5)+
+#   scale_color_manual(values=c("forest green","red","blue"), name="Status")+
+#     geom_polygon(data=fortify(city_bound),
+#     aes(long, lat, group=group), fill="red",colour="black", alpha=.2)+
+#   xlab("Longitude")+ylab("Latitude")+
+#   theme(legend.position = "bottom")+
+#       guides(colour = guide_legend(nrow = 3, byrow = T))+
+#   theme(text=element_text(size=14),  legend.text=element_text(size=12)) #change font size of legend text
+# b
+
+  
+  
+  
+  
+    
+    
+```
+
+
+
+
+
+
+### Table 2: Sample area and count of plots within NLCD land cover categories in `r city_name`, `r report_year`
+
+```{r Table 2: Distribution of Urban FIA plots amoung NLCD land cover, echo=FALSE, warning=FALSE, message=FALSE, error=FALSE}
+
+tmp1 <- select(Stratum, ESTN_UNIT_NAME, STRATUM_LABEL_FULL, STRATUM_ACRES, STRATUM_PLOT_COUNT) %>% mutate(PCT_ACRES = round(STRATUM_ACRES/sum(STRATUM_ACRES) * 100, 1)) %>% arrange(ESTN_UNIT_NAME, -STRATUM_ACRES)
+
+tmp2 <- tmp1[,c("ESTN_UNIT_NAME", "STRATUM_LABEL_FULL", "STRATUM_ACRES", "PCT_ACRES", "STRATUM_PLOT_COUNT")] 
+landcovtab <- rbind(tmp2, data.frame(ESTN_UNIT_NAME = "Total", STRATUM_LABEL_FULL = " ", STRATUM_ACRES = sum(tmp2$STRATUM_ACRES), PCT_ACRES = sum(tmp2$PCT_ACRES), STRATUM_PLOT_COUNT = sum(tmp2$STRATUM_PLOT_COUNT)))
+
+a <- nrow(landcovtab)
+
+
+ kable(landcovtab, format = "html",
+       booktabs = TRUE,
+       digits=c(0,0,0,1,0),
+       col.names = (c("Estimation unit", "Land cover", "Area (acres)","City land area (percent)", "Plots (number)")),
+  # caption=tab.2_cap,
+       format.args = list(big.mark = ','),
+       align=c("l", "l", "r","r","r"),
+       linesep="") %>%
+  kable_styling(latex_options="HOLD_position") %>%
+   row_spec(0, bold=TRUE, hline=FALSE)%>%
+  row_spec(a, bold=TRUE)%>%
+  footnote(general = c("NLCD = National Land Cover Database.", "Due to rounding, not all values will add up exactly."), general_title = "")
+
+ rm(tmp1,tmp2, a, landcovtab)
+
+```
+
+
+## Table 3: Sample area and count of plots within FIA land use classes, `r city_name`, `r report_year`
+
+
+```{r Table 3: Sample area and count of plots within FIA land use classes, echo=FALSE, warning=FALSE, message=FALSE, error=FALSE}
+
+
+
+
+#---#---#---#---#---#---#---#---#---#---
+# Total area per LU with SE
+tmp1<-  Landuse %>%
+          group_by(STRATUM_LABEL, STRATUM_CN, LAND_USE_10, PLT_CN) %>%
+          summarize(PLT_ADJ = sum(ACRES_ADJ),
+                    .groups = 'drop') %>%
+          group_by(STRATUM_LABEL, STRATUM_CN, LAND_USE_10) %>%
+          summarize(plt_s = sum(PLT_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+                    plt_s2 = sum(PLT_ADJ^2), # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)
+                    .groups = 'drop')
+
+tmp2 <- full_join(select(Stratum, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_PLOT_COUNT, STRATUM_WEIGHT, STRATUM_CN), tmp1, by = "STRATUM_CN") %>% # join to POP_STATUM values
+mutate(var_plt = ((plt_s2 - STRATUM_PLOT_COUNT * ((plt_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))), # v(P_hd) eq 4.4
+       PLT_pop = ESTN_UNIT_ACRES * STRATUM_WEIGHT * plt_s/ STRATUM_PLOT_COUNT,
+       PLT_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_plt) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_plt)) # calculate stratum-landuse variance
+
+tmp3 <- tmp2 %>%
+            group_by(LAND_USE_10) %>%
+            summarize(PLT_POP = sum(PLT_pop, na.rm = T),
+                      PLT_VAR = sum(PLT_var, na.rm = T),
+                      PLT_CNT = sum(plt_s),
+                      .groups = 'drop') %>%
+            mutate(PLT_POP_PCT = (PLT_POP/sum(PLT_POP))*100,
+              PLT_STND_ERR = sqrt(PLT_VAR)) # Area SEs per land use
+
+AREA_LU_POP_SE <- select(tmp3, LAND_USE_10, PLT_POP, PLT_STND_ERR, PLT_POP_PCT, PLT_CNT)
+#---#---#---#---#---#---#---#---#---#---
+
+#---#---#---#---#---#---#---#---#---#---
+# Total area and standard error for All Land (total row)
+tmp4 <- Landuse %>%
+          group_by(STRATUM_LABEL, STRATUM_CN, PLT_CN) %>%
+          summarize(PLT_ADJ = sum(ACRES_ADJ),
+                    .groups = 'drop') %>%
+          group_by(STRATUM_LABEL, STRATUM_CN) %>%
+          summarize(plt_s = sum(PLT_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+                    plt_s2 = sum(PLT_ADJ^2), # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)
+                    .groups = 'drop')
+
+tmp5 <- full_join(select(Stratum, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_PLOT_COUNT, STRATUM_WEIGHT, STRATUM_CN), tmp4, by = "STRATUM_CN") %>% # join to POP_STATUM values
+mutate(var_plt = ((plt_s2 - STRATUM_PLOT_COUNT * ((plt_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))), # v(P_hd) eq 4.4
+       PLT_pop = ESTN_UNIT_ACRES * STRATUM_WEIGHT * plt_s/ STRATUM_PLOT_COUNT,
+       PLT_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_plt) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_plt)) # calculate stratum-landuse variance
+
+tmp6 <- tmp5 %>% group_by(EVALID) %>%
+                  summarize(PLT_POP = sum(PLT_pop, na.rm = T),
+                  PLT_VAR = sum(PLT_var, na.rm = T),
+                  PLT_CNT = sum(plt_s),
+                    .groups = 'drop') %>%
+                  mutate(PLT_POP_PCT = (PLT_POP/sum(PLT_POP))*100,
+                    PLT_STND_ERR = sqrt(PLT_VAR)) # Area SE for entire population
+
+#---#---#---#---#---#---#---#---#---#---
+
+
+tot_row <- select(tmp6, PLT_POP, PLT_STND_ERR, PLT_POP_PCT, PLT_CNT)
+tot_row$LAND_USE_10 <- "Total" 
+tot_row <- tot_row[,c("LAND_USE_10", "PLT_POP", "PLT_STND_ERR", "PLT_POP_PCT", "PLT_CNT")]
+
+fiacovtab <- rbind(AREA_LU_POP_SE, tot_row)
+
+a <- nrow(fiacovtab)
+
+tim3<- kable(fiacovtab, format = "html",
+       booktabs = TRUE,
+       digits=c(0,0,0,1,1),
+       col.names = (c("FIA land use", "Area (acres)", "Standard error (acres)", "City land area (percent)", "Plots (number)")),
+  # caption=tab.3_cap,
+       format.args = list(big.mark = ','),
+       align=c("l", "r","r","c", "c"),
+       linesep="") %>%
+  kable_styling(latex_options="HOLD_position") %>%
+  row_spec(0, bold=TRUE, hline=FALSE)%>%
+
+  row_spec(a, bold=TRUE)%>%
+  footnote(general = c("Due to rounding, not all values will add up exactly."), general_title = "")
+
+tim3
+
+ rm(tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, AREA_LU_POP_SE, tot_row, a, fiacovtab)
+```
+ 
+
+## Table 4: Percent tree, shrub and impervious cover for `r city_name`, `r report_year`
+
+```{r Table 4: Percent tree, shrub and impervious cover, echo=FALSE, warning=FALSE, message=FALSE, error=FALSE}
+
+  #---#---#---#---#---#---#---#---#---#---
+ # Percent tree, shrub and impervious cover per land use
+tmp1 <-  Landuse %>% 
+          group_by(STRATUM_LABEL, STRATUM_CN, LAND_USE_10, PLT_CN) %>%
+          summarize(TREE_COVER = sum(TRE_COV_ADJ/100), # divide by 100 to take from percent to proportion 
+                    SHRUB_SEED_COVER = sum(SHR_COV_ADJ/100), #plot level since plot is working unit
+                    IMPERVIOUS_COVER = sum(IMP_COV_ADJ/100),
+                    plt_ADJ = sum(ACRES_ADJ),
+                    .groups = 'drop') %>%
+          group_by(STRATUM_LABEL, STRATUM_CN, LAND_USE_10) %>%
+          summarize(tre_s = sum(TREE_COVER),
+                    tre_s2 = sum(TREE_COVER^2),
+                    shr_s = sum(SHRUB_SEED_COVER),
+                    shr_s2 = sum(SHRUB_SEED_COVER^2),
+                    imp_s = sum(IMPERVIOUS_COVER),
+                    imp_s2 = sum(IMPERVIOUS_COVER^2),
+                    plt_s = sum(plt_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+                    plt_s2 = sum(plt_ADJ^2), .groups = 'drop') # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)
+ 
+ #Turn NAs into 0
+ tmp1[is.na(tmp1)] <- 0
+
+tmp2 <- full_join(select(Stratum, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_CN, STRATUM_PLOT_COUNT, STRATUM_WEIGHT), tmp1, by = "STRATUM_CN") %>% # join to POP_STATUM values
+mutate(var_tre = ((tre_s2 - STRATUM_PLOT_COUNT * ((tre_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))),
+       TRE_pop = ESTN_UNIT_ACRES * STRATUM_WEIGHT * tre_s/ STRATUM_PLOT_COUNT,
+       TRE_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_tre) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_tre),
+       var_shr = ((shr_s2 - STRATUM_PLOT_COUNT * ((shr_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))),
+       SHR_pop = ESTN_UNIT_ACRES * STRATUM_WEIGHT * shr_s/ STRATUM_PLOT_COUNT,
+       SHR_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_shr) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_shr),
+       var_imp = ((imp_s2 - STRATUM_PLOT_COUNT * ((imp_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))),
+       IMP_pop = ESTN_UNIT_ACRES * STRATUM_WEIGHT * imp_s/ STRATUM_PLOT_COUNT,
+       IMP_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_imp) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_imp),
+       var_plt = ((plt_s2 - STRATUM_PLOT_COUNT * ((plt_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))),
+       PLT_pop = ESTN_UNIT_ACRES * STRATUM_WEIGHT * plt_s/ STRATUM_PLOT_COUNT,
+       PLT_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_plt) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_plt)) # calculate stratum-landuse variance
+
+tmp3 <- tmp2 %>%
+            group_by(LAND_USE_10) %>%
+            summarize(TREE_COVER = (sum(TRE_pop)/sum(PLT_pop)*100),      #from a proportion to percent
+                    SHRUB_SEED_COVER = (sum(SHR_pop)/sum(PLT_pop)*100),  #from a proportion to percent
+                    IMPERVIOUS_COVER = (sum(IMP_pop)/sum(PLT_pop)*100),  #from a proportion to percent
+                    LANDUSE_ACRES = sum(PLT_pop),
+                    VAR_POP = sum(PLT_var), .groups = 'drop') 
+
+ #---#---#---#---#---#---#---#---#---#---
+
+COV_LU <- select(tmp3, LAND_USE_10, TREE_COVER, SHRUB_SEED_COVER, IMPERVIOUS_COVER)
+
+ #---#---#---#---#---#---#---#---#---#---
+
+# Percent tree, shrub and impervious cover for total row
+# Adjusted 4/13/2022 to use the ratio estimates method for calculating covariance (eq 4.17)
+
+tmp4 <-  Landuse %>% 
+          group_by(STRATUM_LABEL, STRATUM_CN, PLT_CN) %>%
+          summarize(TREE_COVER = sum(TRE_COV_ADJ/100), # divide by 100 to take from percent to proportion 
+                    SHRUB_SEED_COVER = sum(SHR_COV_ADJ/100),
+                    IMPERVIOUS_COVER = sum(IMP_COV_ADJ/100),
+                    plt_ADJ = sum(ACRES_ADJ),
+                    .groups = 'drop') %>%
+          group_by(STRATUM_LABEL, STRATUM_CN) %>%
+          summarize(tre_s = sum(TREE_COVER),        #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+                    tre_s2 = sum(TREE_COVER^2),     #TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)
+                    shr_s = sum(SHRUB_SEED_COVER),
+                    shr_s2 = sum(SHRUB_SEED_COVER^2),
+                    imp_s = sum(IMPERVIOUS_COVER),
+                    imp_s2 = sum(IMPERVIOUS_COVER^2),
+                    plt_s = sum(plt_ADJ), 
+                    plt_s2 = sum(plt_ADJ^2),
+                    tre_plt_s = sum(TREE_COVER * plt_ADJ), #numerator-denominator y_hid*x_hid 
+                    shr_plt_s = sum(SHRUB_SEED_COVER * plt_ADJ), #sum_xy_adj in Mark's script
+                    imp_plt_s = sum(IMPERVIOUS_COVER * plt_ADJ),
+                    .groups = 'drop') 
+
+ #Turn NAs into 0
+ tmp4[is.na(tmp4)] <- 0
+
+# calculate stratum-landuse variance
+tmp5 <- full_join(select(Stratum, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_CN, STRATUM_PLOT_COUNT, STRATUM_WEIGHT), tmp4, by = "STRATUM_CN") %>% # join to POP_STATUM values
+mutate(var_tre = ((tre_s2 - STRATUM_PLOT_COUNT * ((tre_s/STRATUM_PLOT_COUNT)^2))/ 
+                    (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))), #y_var
+       TRE_pop = ESTN_UNIT_ACRES * STRATUM_WEIGHT * tre_s/ STRATUM_PLOT_COUNT, #y_hat
+       TRE_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_tre) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_tre), #var_numerator
+       
+       var_shr = ((shr_s2 - STRATUM_PLOT_COUNT * ((shr_s/STRATUM_PLOT_COUNT)^2))/ 
+                    (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))),
+       SHR_pop = ESTN_UNIT_ACRES * STRATUM_WEIGHT * shr_s/ STRATUM_PLOT_COUNT,
+       SHR_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_shr) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_shr),
+       
+       var_imp = ((imp_s2 - STRATUM_PLOT_COUNT * ((imp_s/STRATUM_PLOT_COUNT)^2))/ 
+                    (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))),
+       IMP_pop = ESTN_UNIT_ACRES * STRATUM_WEIGHT * imp_s/ STRATUM_PLOT_COUNT,
+       IMP_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_imp) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_imp),
+       
+       var_plt = ((plt_s2 - STRATUM_PLOT_COUNT * ((plt_s/STRATUM_PLOT_COUNT)^2))/ 
+                    (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))), #x_var
+       PLT_pop = ESTN_UNIT_ACRES * STRATUM_WEIGHT * plt_s/ STRATUM_PLOT_COUNT, # x_hat
+       PLT_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_plt) + 
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_plt), #var_denominator
+       
+       tre_plt_cov = (tre_plt_s - STRATUM_PLOT_COUNT * (tre_s/STRATUM_PLOT_COUNT) * (plt_s/STRATUM_PLOT_COUNT))/ 
+         (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1)), #cov_xy eq. 4.19
+       shr_plt_cov = (shr_plt_s - STRATUM_PLOT_COUNT * (shr_s/STRATUM_PLOT_COUNT) * (plt_s/STRATUM_PLOT_COUNT))/ 
+         (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1)), #cov_xy eq. 4.19
+       imp_plt_cov = (imp_plt_s - STRATUM_PLOT_COUNT * (imp_s/STRATUM_PLOT_COUNT * plt_s/STRATUM_PLOT_COUNT))/ 
+         (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1)), #cov_xy eq. 4.19
+       
+       TRE_PLT_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * tre_plt_cov) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * tre_plt_cov), #cov_x_hat_y_hat eq. 4.18
+       SHR_PLT_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * shr_plt_cov) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * shr_plt_cov), #cov_x_hat_y_hat eq. 4.18
+       IMP_PLT_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * imp_plt_cov) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * imp_plt_cov) #cov_x_hat_y_hat eq. 4.18
+)
+       
+tmp6 <- tmp5 %>% group_by(EVALID) %>% 
+                  summarize(EVALID_ACRES = sum(PLT_pop),
+                  TRE_POP = sum(TRE_pop),
+                  TRE_PLT_VAR = (1/(sum(PLT_pop)^2)) *  # 1/x_hat^2 (eq. 4.17)
+                    (sum(TRE_var) +                      # var_y
+                    (sum(TRE_pop)/sum(PLT_pop))^2 *     # R^2
+                    sum(PLT_var) -                      # var_x
+                    (2*(sum(TRE_pop)/sum(PLT_pop))) *   # 2R
+                    sum(TRE_PLT_var)),                   #cov_xy 
+                  
+                  SHR_POP = sum(SHR_pop),
+                  SHR_PLT_VAR = (1/(sum(PLT_pop)^2)) *  # 1/x_hat^2
+                    (sum(SHR_var) +                      # var_y
+                    (sum(SHR_pop)/sum(PLT_pop))^2 *     # R^2
+                    sum(PLT_var) -                      # var_x
+                    (2*(sum(SHR_pop)/sum(PLT_pop))) *   # 2R
+                    sum(SHR_PLT_var)),                   #cov_xy 
+                  
+                  IMP_POP = sum(IMP_pop),
+                  IMP_PLT_VAR = (1/(sum(PLT_pop)^2)) *  # 1/x_hat^2
+                    (sum(IMP_var) +                      # var_y
+                    (sum(IMP_pop)/sum(PLT_pop))^2 *     # R^2
+                    sum(PLT_var) -                      # var_x
+                    (2*(sum(IMP_pop)/sum(PLT_pop))) *   # 2R
+                    sum(IMP_PLT_var)),                   #cov_xy 
+                  
+                  PLT_POP = sum(PLT_pop),
+                  .groups = 'drop') %>% 
+                  mutate(TRE_POP_AVG = TRE_POP/PLT_POP*100, #from a proportion to percent
+                         SHR_POP_AVG = SHR_POP/PLT_POP*100,
+                         IMP_POP_AVG = IMP_POP/PLT_POP*100,
+                         TRE_STND_ERR_PCT = (sqrt(TRE_PLT_VAR))*100,
+                         SHR_STND_ERR_PCT = (sqrt(SHR_PLT_VAR))*100,
+                         IMP_STND_ERR_PCT = (sqrt(IMP_PLT_VAR))*100
+                         )
+
+#---#---#---#---#---#---#---#---#---#---
+
+tot_avg <- select(tmp6, TRE_POP_AVG, SHR_POP_AVG, IMP_POP_AVG)
+tot_SE <- select(tmp6, TRE_STND_ERR_PCT, SHR_STND_ERR_PCT, IMP_STND_ERR_PCT)
+
+tot_avg$LAND_USE_10 <- "Total average"
+tot_avg <- tot_avg[,c(4,1:3)]
+names(tot_avg) <- c("LAND_USE_10", "TREE_COVER", "SHRUB_SEED_COVER", "IMPERVIOUS_COVER")
+
+tot_SE$LAND_USE_10 <- "Total standard error" 
+tot_SE <- tot_SE[,c(4,1:3)]
+names(tot_SE) <- c("LAND_USE_10", "TREE_COVER", "SHRUB_SEED_COVER", "IMPERVIOUS_COVER")
+
+cover_tab <- rbind(COV_LU, tot_avg, tot_SE) %>% mutate_if(is.numeric, round,1)
+a <- nrow(cover_tab)
+
+
+tim4<-kable(cover_tab, format = "html",
+      escape = FALSE,
+      booktabs = TRUE,
+      digits= c(0,1,1,1),
+# caption= tab.4_cap,
+      col.names = c("FIA land use", "Tree (percent)", "Shrub (percent)", "Impervious (percent)"),
+      align=c("l","r","r", "r"),
+      linesep="") %>%
+  kable_styling(latex_options="HOLD_position") %>%
+  row_spec(0, bold = TRUE) %>%
+  row_spec(c(a-1, a), bold = TRUE)%>%
+  footnote(general = c("Due to rounding, not all values will add up exactly."), general_title = "")
+
+tim4
+rm(tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, COV_LU, tot_SE, a,  cover_tab)
+```
+
+## Table 5: Distribution of percent of live trees within diameter class by ownership, `r city_name`, `r report_year`
+
+```{r Table 5: Distribution of live trees by diameter class among ownership classes, echo=FALSE, warning=FALSE, message=FALSE, error=FALSE}
+
+#live trees
+
+tmp1 <- Landuse %>% group_by(OWNER_GROUP) %>% summarize(tot_acres = sum(ACRES), .groups = 'drop') %>% mutate(per_acres = (tot_acres/sum(tot_acres))*100)
+
+FIATree <- FIATree %>% mutate(DIA_cat = cut(DIA, c(0,5,11,Inf), labels=c("sapling","medium", "large"), right = FALSE))
+
+tmp2 <- select(filter(FIATree, STATUSCD ==1), OWNER_GROUP, DIA_cat, TREES_PER_PLOT) %>% pivot_wider(names_from = DIA_cat, values_from = TREES_PER_PLOT, values_fill = 0, values_fn = list(TREES_PER_PLOT = sum)) %>% mutate(Total = sapling + medium + large)
+
+tmp2 <- tmp2 %>% mutate(sapling_per = (sapling/sum(sapling)*100), medium_per = (medium/sum(medium)*100), large_per = (large/sum(large)*100), Total_per = (Total/sum(Total)*100)) 
+
+tmp3 <- full_join(select(tmp2, OWNER_GROUP, sapling_per, medium_per, large_per, Total_per), select(tmp1, OWNER_GROUP, per_acres), by = "OWNER_GROUP")
+
+tmp3[is.na(tmp3)] <- 0
+
+tmp3 <- tmp3 %>% mutate(OWNER_GROUP = revalue(OWNER_GROUP, c("StateLocal" = "State and Local", "OtherFederal" = "Federal"))) 
+
+saptreeowntab <- rbind(tmp3, data.frame(OWNER_GROUP = "Total", sapling_per = sum(tmp3$sapling_per), medium_per = sum(tmp3$medium_per), large_per=sum(tmp3$large_per), Total_per = sum(tmp3$Total_per), per_acres = sum(tmp3$per_acres))) # Add column totals
+
+a <- nrow(saptreeowntab)
+
+
+tim5<-kable(saptreeowntab,
+        format = "html",
+        row.names = FALSE,
+        booktabs = TRUE,
+        escape = FALSE,
+        digits=c(0,1,1,1,1,1),
+        col.names = c("Ownership class", "1-4.9 in. diameter trees (percent)","5-10.9 in. diameter trees (percent)","11+ in. diameter trees (percent)", "Total (percent)","City land area (percent)"),
+    # caption=tab.5_cap,
+        align=c("l","r","r","r","r","r"),
+        linesep="") %>%
+    kable_styling(latex_options="HOLD_position") %>%
+    row_spec(0, bold=TRUE)%>%
+    row_spec(a, bold=TRUE)%>%
+  footnote(general = "Due to rounding, not all values will add up exactly.", general_title = "")
+
+
+tim5
+
+rm(tmp1, tmp2, tmp3, a, saptreeowntab)
+```
+
+## Table 6.  Distribution of live trees by diameter class amoung FIA land use categories
+
+```{r, Table 6. Distribution of live trees by diameter class amoung FIA land use categories, echo=FALSE, warning=FALSE, message=FALSE, error=FALSE}
+#live trees
+
+FIATree <- FIATree %>% mutate(LAND_USE_10 = revalue(LAND_USE, c("Forest Land" = "Forest land", "Cropland" = "Agriculture", "Pasture" = "Agriculture", "IdleFarmland" = "Agriculture", "Orchard" = "Agriculture", "ChristmasPlantation" = "Agriculture", "WildlifeOpening" = "Agriculture", "Windbreak" = "Agriculture", "NonforestChaparral" = "Rangeland/Chaparral", "Rangeland" = "Rangeland/Chaparral", "Commercial" = "Commercial/Industrial", "Cultural" = "Commercial/Industrial",  "Developed" = "Commercial/Industrial", "Institutional" = "Commercial/Industrial", "MiningWasteland" = "Commercial/Industrial", "Multi-family" = "Multi-family residential", "Recreation" = "Recreation/Cemetery", "Cemetery" = "Recreation/Cemetery", "Park" = "Recreation/Cemetery", "GolfCourse" = "Recreation/Cemetery", "Transportation" = "Rights-of-way", "Utility" = "Rights-of-way", "Other" = "Natural lands", "Nonvegetated" = "Natural lands", "Wetland" = "Natural lands", "Beach" = "Natural lands")))
+
+
+# Order the landuse levels
+FIATree$LAND_USE_10 <- ordered(FIATree$LAND_USE_10, levels = c("Forest land", "Agriculture", "Rangeland/Chaparral", "Commercial/Industrial", "Multi-family residential", "Residential", "Recreation/Cemetery", "Rights-of-way", "Natural lands", "Water"))
+
+
+
+tmp1 <- select(filter(FIATree, STATUSCD ==1), LAND_USE_10, DIA_cat, TREES_PER_PLOT) %>% pivot_wider(names_from = DIA_cat, values_from = TREES_PER_PLOT, values_fn = list(TREES_PER_PLOT = sum), values_fill = list(TREES_PER_PLOT =0)) %>% arrange(LAND_USE_10)
+
+# Total trees per LU with SE 
+tmp2 <-  filter(FIATree, STATUSCD ==1) %>% 
+          group_by(STRATUM_LABEL, STRATUM_CN, LAND_USE_10, PLT_CN) %>%
+          summarize(tre_ADJ = sum(TREE_ADJ),
+                    .groups = 'drop') %>%
+          group_by(STRATUM_LABEL, STRATUM_CN, LAND_USE_10) %>%
+          summarize(tre_s = sum(tre_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+                    tre_s2 = sum(tre_ADJ^2), # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)
+                    .groups = 'drop') 
+
+tmp3 <- full_join(select(Stratum, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_CN, STRATUM_PLOT_COUNT, STRATUM_WEIGHT), tmp2, by = "STRATUM_CN") %>% # join to POP_STATUM values
+mutate(var_tre = ((tre_s2 - STRATUM_PLOT_COUNT * ((tre_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))), # v(P_hd) eq 4.4
+       TRE_pop = ESTN_UNIT_ACRES * STRATUM_WEIGHT * tre_s/ STRATUM_PLOT_COUNT,
+       TRE_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_tre) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_tre)) # calculate stratum-landuse variance
+
+#LU area for density estimates
+tmp4 <- Landuse %>% group_by(LAND_USE_10) %>% summarize(ACRES = sum(ACRES))
+
+tmp5 <- tmp3 %>%
+            group_by(LAND_USE_10) %>%
+            summarize(TRE_POP = sum(TRE_pop, na.rm = T),
+                      TRE_VAR = sum(TRE_var, na.rm = T),
+                      .groups = 'drop') %>%
+            mutate(TRE_STND_ERR = sqrt(TRE_VAR)) # Tree SEs for each landuse 
+
+tmp6 <- full_join(filter(tmp5, !is.na(LAND_USE_10)), tmp4, by = "LAND_USE_10") %>% mutate(TRE_DEN = TRE_POP/ACRES)
+
+tmp6[is.na(tmp6)] <- 0
+
+TRE_LU_POP_SE <- select(tmp6, LAND_USE_10, TRE_POP, TRE_STND_ERR, TRE_DEN) 
+
+# Standard errors for tree size classes (total row)
+tmp7 <- select(filter(FIATree, STATUSCD ==1), TREE_ADJ, STRATUM_LABEL, STRATUM_CN, PLT_CN, DIA_cat) %>% 
+  pivot_wider(names_from = DIA_cat, values_from = TREE_ADJ, values_fn = list(TREE_ADJ = sum), values_fill = list(TREE_ADJ =0)) %>% #sums to plot level
+  mutate(all = sapling + medium + large) %>%
+  group_by(STRATUM_LABEL, STRATUM_CN) %>%
+          summarize(sapling_s = sum(sapling, na.rm = T), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+                    sapling_s2 = sum(sapling^2, na.rm = T), # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)
+                    medium_s = sum(medium, na.rm = T), 
+                    medium_s2 = sum(medium^2, na.rm = T),
+                    large_s = sum(large, na.rm = T), 
+                    large_s2 = sum(large^2, na.rm = T),
+                    all_s = sum(all, na.rm = T),
+                    all_s2 = sum(all^2, na.rm = T),
+                    .groups = 'drop') 
+  
+tmp8 <-  full_join(select(Stratum, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_CN, STRATUM_PLOT_COUNT, STRATUM_WEIGHT), tmp7, by = "STRATUM_CN") %>% # join to POP_STATUM values
+mutate(var_sap = ((sapling_s2 - STRATUM_PLOT_COUNT * ((sapling_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))), # v(P_hd) eq 4.4
+       SAP_pop = ESTN_UNIT_ACRES * STRATUM_WEIGHT * sapling_s/ STRATUM_PLOT_COUNT,
+       SAP_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_sap) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_sap),
+       var_med = ((medium_s2 - STRATUM_PLOT_COUNT * ((medium_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))),
+       MED_pop = ESTN_UNIT_ACRES * STRATUM_WEIGHT * medium_s/ STRATUM_PLOT_COUNT,
+       MED_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_med) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_med),
+       var_lar = ((large_s2 - STRATUM_PLOT_COUNT * ((large_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))),
+       LAR_pop = ESTN_UNIT_ACRES * STRATUM_WEIGHT * large_s/ STRATUM_PLOT_COUNT,
+       LAR_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_lar) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_lar),
+       var_all = ((all_s2 - STRATUM_PLOT_COUNT * ((all_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))), # v(P_hd) eq 4.4
+       ALL_pop = ESTN_UNIT_ACRES * STRATUM_WEIGHT * all_s/ STRATUM_PLOT_COUNT,
+       ALL_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_all) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_all)) # calculate stratum variance
+
+tmp9 <- tmp8 %>% group_by(EVALID) %>% 
+                  summarize(SAP_POP = sum(SAP_pop, na.rm = T),
+                  SAP_VAR = sum(SAP_var, na.rm = T),
+                  MED_POP = sum(MED_pop, na.rm = T),
+                  MED_VAR = sum(MED_var, na.rm = T),
+                  LAR_POP = sum(LAR_pop, na.rm = T),
+                  LAR_VAR = sum(LAR_var, na.rm = T),
+                  ALL_POP = sum(ALL_pop, na.rm = T),
+                  ALL_VAR = sum(ALL_var, na.rm = T),
+                  ALL_DEN = sum(ALL_pop, na.rm = T)/max(ESTN_UNIT_ACRES),
+                  .groups = 'drop'
+                    ) %>% 
+                  mutate(SAP_STND_ERR = sqrt(SAP_VAR),
+                         MED_STND_ERR = sqrt(MED_VAR),
+                         LAR_STND_ERR = sqrt(LAR_VAR),
+                         ALL_STND_ERR = sqrt(ALL_VAR)) # SEs for tree size classes across the population
+  
+# Piecing it together  
+tmp10 <- full_join(tmp1[,c("LAND_USE_10", "sapling", "medium", "large")], TRE_LU_POP_SE, by = "LAND_USE_10")
+tmp10[is.na(tmp10)] <- 0
+
+tot_row <- select(tmp9, SAP_POP, MED_POP, LAR_POP, ALL_POP, ALL_DEN)
+names(tot_row) <- c("sapling", "medium", "large", "TRE_POP", "TRE_DEN")
+tot_row$LAND_USE_10 <- "Total"
+tot_row$TRE_STND_ERR <- "--"
+tot_row <- tot_row[,c("LAND_USE_10", "sapling", "medium", "large", "TRE_POP","TRE_STND_ERR", "TRE_DEN")]
+
+
+
+tot_row$sapling<-format(round(tot_row$sapling))
+tot_row$medium<-format(round(tot_row$medium))
+tot_row$sapling<-format(round(tot_row$sapling))
+tot_row$TRE_POP<-format(round(tot_row$TRE_POP))
+tot_row$TRE_DEN<-format(round(tot_row$TRE_DEN))
+
+
+##
+    #    #   #
+##
+# tot_row[ ,2:5]<-format(round(tot_row[ ,2:5], digits=0), big.mark=",")
+
+
+SE_row <- select(tmp9, EVALID, SAP_STND_ERR, MED_STND_ERR, LAR_STND_ERR, ALL_STND_ERR)
+names(SE_row) <- c("EVALID", "sapling", "medium", "large", "TRE_POP")
+SE_row$LAND_USE_10 <- "Total standard error"
+SE_row$TRE_STND_ERR <- "--"
+SE_row$TRE_DEN <- "--"
+SE_row <- SE_row[,c("LAND_USE_10", "sapling", "medium", "large", "TRE_POP","TRE_STND_ERR", "TRE_DEN")]
+
+#Need to add big.marks = ',' prior to kable() call because adding character values to columns (--) 
+# so kable doesn't correctly format all columns
+
+
+## round tmp10 before tot_row?
+
+# tmp10[-c(1,7)] <- apply(tmp10[-c(1,7)], FUN = roundBM, MARGIN = c(1,2))
+# tmp10$TRE_DEN <- round(tmp10$TRE_DEN, digits = 0)
+# tot_row[-c(1,6)] <- apply(tot_row[-c(1,6)], FUN = roundBM, MARGIN = c(1,2))
+# SE_row[-c(1,6:7)] <- apply(SE_row[-c(1,6:7)], FUN = roundBM, MARGIN = c(1,2))
+treefialutab <- rbind(tmp10, tot_row, SE_row)
+
+a <- nrow(treefialutab)
+
+
+
+
+options(knitr.kable.NA = '--')
+
+ tim6<- kable(treefialutab, format = "html",
+      escape=TRUE,
+      booktabs = TRUE,
+ # caption= tab.6_cap,
+      digits= c(0,0,0,0,0,0,1),
+      big.mark=",",
+      col.names = c("FIA land use","1-4.9 in. diameter trees (number)","5-10.9 in. diameter trees (number)","11+ in. diameter trees (number)", "Total (number)", "Total standard error (number)", "Density (number per acre)"),
+      align=c("l","r","r","r","r", "r","r"),
+      linesep="") %>%
+    kable_styling(latex_options=c("HOLD_position")) %>%
+   row_spec(0, bold=TRUE) %>%
+   row_spec(c(a-1,a), bold=TRUE)%>%
+   footnote(general = "Due to rounding, not all values will add up exactly.", general_title = "")
+
+
+tim6
+
+
+
+rm(tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7, tmp8, tmp9, tmp10)
+rm(TRE_LU_POP_SE, tot_row, SE_row, a, treefialutab)
+
+```
+
+## Table 7: Species composition on private lands in `r city_name`, `r report_year`
+
+```{r, Table 7: Species composition on private lands, echo=FALSE, warning=FALSE, message=FALSE, error=FALSE}
+
+#live trees
+tmp1 <- filter(FIATree, STATUSCD ==1 & PUBLIC_PRIVATE == 'Private') %>% group_by(SPCD, GENUS, SPECIES, COMMON_NAME) %>% summarize(CNT = sum(TREES_PER_PLOT), .groups = 'drop') %>% mutate(PCT = (CNT/sum(CNT)*100))%>% arrange(desc(PCT))
+
+# round data here because if null rows are added below, it turns the variables into character which can't be rounded
+tmp2 <- select(tmp1, COMMON_NAME, PCT) %>% mutate(PCT = format(round(PCT, digits = 1), nsmall = 1))
+
+# replace "0.0" with <0.1
+tmp2$PCT[tmp2$PCT == " 0.0"] <- "\\textless0.1"
+
+# Divide table into three columns for display #
+#Find dimensions of table
+rows <- floor(nrow(tmp2)/3) # number of whole rows if three columns
+remainder <- nrow(tmp2) - rows * 3 # number of observations left over (if they don't divide evenly into three columns)
+
+#Find column lengths
+col1start <- 1
+col1end <- rows + ifelse(remainder > 0, 1, 0)
+col2start <- col1end + 1
+col2end <- col2start + (rows - 1) + ifelse(remainder > 1, 1, 0)
+col3start <- col2end + 1
+col3end <- col3start + (rows - 1)
+
+priv1 <- tmp2[col1start:col1end,]
+priv2 <- tmp2[col2start:col2end,]
+priv3 <- tmp2[col3start:col3end,]
+
+# add null entries so table has the same number of rows (if needed)
+fillnull <- data.frame(COMMON_NAME = "", PCT = "")
+
+if (nrow(priv2) < nrow(priv1)) {
+  priv2 <- rbind(priv2, fillnull)
+}
+
+if (nrow(priv3) < nrow(priv1)) {
+  priv3 <- rbind(priv3, fillnull)
+}
+
+privtreetab = cbind(priv1, priv2, priv3)
+
+
+
+tim7<-kable(privtreetab, format = "html",
+       booktabs = TRUE,
+       digits=c(0,1),
+  # caption= tab.7_cap,
+       row.names = FALSE,
+       escape = FALSE, 
+       col.names = (c("Species", "Trees (percent)", "Species", "Trees (percent)","Species", "Trees (percent)")) ,
+       align=(c("l","c","l","c","l","c")),
+       linesep="") %>%
+    kable_styling(latex_options="HOLD_position")%>%
+    row_spec(0, hline=FALSE) %>%
+  footnote(general = c("Due to rounding, not all values will add up exactly."), general_title = "")
+
+tim7
+
+rm(tmp1, tmp2, privtreetab, priv1, priv2, priv3, col1start, col1end, col2start, col2end, col3start, col3end, rows, remainder, fillnull)
+```
+
+## Table 8: Species composition on public lands in `r city_name`, `r report_year`
+
+```{r, Table 8: Species composition on public lands, echo=FALSE, warning=FALSE, message=FALSE, error=FALSE}
+
+#live trees
+tmp1 <- filter(FIATree, STATUSCD ==1 & PUBLIC_PRIVATE == 'Public') %>% group_by(SPCD, GENUS, SPECIES, COMMON_NAME) %>% summarize(CNT = sum(TREES_PER_PLOT), .groups = 'drop') %>% mutate(PCT = (CNT/sum(CNT)*100))%>% arrange(desc(PCT))
+
+# round data here because if null rows are added below, it turns the variables into character which can't be rounded
+tmp2 <- select(tmp1, COMMON_NAME, PCT) %>% mutate(PCT = format(round(PCT, digits = 1), nsmall = 1))
+
+# replace "0.0" with <0.1
+tmp2$PCT[tmp2$PCT == " 0.0"] <- "\\textless0.1"
+
+# Divide table into three columns for display #
+#Find dimensions of table
+rows <- floor(nrow(tmp2)/3) # number of whole rows if three columns
+remainder <- nrow(tmp2) - rows * 3 # number of observations left over (if they don't divide evenly into three columns)
+
+#Find column lengths
+col1start <- 1
+col1end <- rows + ifelse(remainder > 0, 1, 0)
+col2start <- col1end + 1
+col2end <- col2start + (rows - 1) + ifelse(remainder > 1, 1, 0)
+col3start <- col2end + 1
+col3end <- col3start + (rows - 1)
+
+pub1 <- tmp2[col1start:col1end,]
+pub2 <- tmp2[col2start:col2end,]
+pub3 <- tmp2[col3start:col3end,]
+
+# add null entries so table has the same number of rows (if needed)
+fillnull <- data.frame(COMMON_NAME = "", PCT = "")
+
+if (nrow(pub2) < nrow(pub1)) {
+  pub2 <- rbind(pub2, fillnull)
+}
+
+if (nrow(pub3) < nrow(pub1)) {
+  pub3 <- rbind(pub3, fillnull)
+}
+
+pubtreetab <- cbind(pub1, pub2, pub3)
+
+tim8 <- kable(pubtreetab, format = "html",
+       booktabs = TRUE,
+ # caption= tab.8_cap,
+       row.names = FALSE,
+       escape = FALSE,
+       col.names = (c("Species", "Trees (percent)", "Species", "Trees (percent)","Species", "Trees (percent)")),
+       align=(c("l","c","l","c","l","c")),
+       linesep="") %>%
+    kable_styling(latex_options="HOLD_position")%>%
+    row_spec(0, hline=FALSE) %>%
+  footnote(general = c("Due to rounding, not all values will add up exactly."), general_title = "")
+
+tim8
+
+
+rm(tmp1, tmp2, pubtreetab, pub1, pub2, pub3, col1start, col1end, col2start, col2end, col3start, col3end, rows, remainder, fillnull)
+```
+
+## Table 9: Species composition in maintained areas of `r city_name`, `r report_year`
+
+```{r, Table 9: Species composition in maintained areas, echo=FALSE, warning=FALSE, message=FALSE, error=FALSE}
+
+# live trees
+tmp1 <- filter(FIATree, STATUSCD == 1 & IS_MAINTAINED_AREA == 1) %>% group_by(SPCD, COMMON_NAME) %>% summarise(CNT = sum(TREES_PER_PLOT), .groups = 'drop') %>% arrange(desc(CNT))
+
+tmp2 <- tmp1[-1]
+tmp2$CNT<-format(round(tmp2$CNT, digits=0), big.mark=",", scientific=FALSE)
+
+#tmp2[2] <- apply(tmp2[2], FUN = roundBM, MARGIN = c(1,2))
+
+# Divide table into two columns for display #
+#Find dimensions of table
+rows <- floor(nrow(tmp2)/2) # number of whole rows if 2 columns
+remainder <- nrow(tmp2) - rows * 2 # number of observations left over (if they don't divide evenly into three columns)
+
+#Find column lengths
+col1start <- 1
+col1end <- rows + ifelse(remainder > 0, 1, 0)
+col2start <- col1end + 1
+col2end <- col2start + (rows - 1) + ifelse(remainder > 1, 1, 0)
+
+main1 <- tmp2[col1start:col1end,]
+main2 <- tmp2[col2start:col2end,]
+
+# add null entries so table has the same number of rows (if needed)
+fillna <- data.frame(COMMON_NAME = " ", CNT = " ")
+
+ if (nrow(main2) < nrow(main1)) {
+    main2 = base::rbind(main2, fillna)
+ }
+
+maintab <- cbind(main1, main2)
+
+tim9 <- kable(maintab,
+      format = "html",
+      escape = FALSE,
+      booktabs = TRUE,
+      row.names = FALSE,
+  # caption= tab.9_cap,
+      col.names = c("Common name", "Number of trees", "Common name", "Number of trees"),
+      align=c("l","r", "l","r"),
+      linesep="") %>%
+  kable_styling(latex_options="HOLD_position") %>%
+  row_spec(0, bold = TRUE)
+
+tim9
+
+rm(tmp1, tmp2, rows, remainder, main1, main2, col1start, col1end, col2start, col2end, fillna, maintab)
+```
+
+## Table 10: Number of trees classified as standing dead by species, `r city_name`, `r report_year`
+
+```{r,  Table 10: Number of trees classified as standing dead, echo=FALSE, warning=FALSE, message=FALSE, error=FALSE}
+
+
+#---#---#---#---#---#---#---#---#---#---
+# Live and dead trees per species (need live trees for dead % of total species count)
+# filter out dead and down trees, as well as STATUSCD 0,3,4
+
+tmp1 <- select(filter(FIATree, (STATUSCD == 1 | STATUSCD ==2) & (is.na(STANDING_DEAD_CD) | STANDING_DEAD_CD ==1)), STRATUM_LABEL, STRATUM_CN, STATUSCD, SPCD, COMMON_NAME, TREE_ADJ, TREES_PER_PLOT, PLT_CN)
+
+tmp2 <- tmp1 %>% group_by(COMMON_NAME, STATUSCD, STRATUM_LABEL, STRATUM_CN, PLT_CN) %>%
+          summarize(TRE_ADJ = sum(TREE_ADJ), #sum to plot - sample unit
+                    .groups = 'drop')  %>% 
+          group_by(COMMON_NAME, STATUSCD, STRATUM_LABEL, STRATUM_CN) %>%
+          summarize(tre_s = sum(TRE_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+                    tre_s2 = sum(TRE_ADJ^2), # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)) 
+                    .groups = 'drop')
+
+tmp3 <-  right_join(select(Stratum, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_CN, STRATUM_PLOT_COUNT, STRATUM_WEIGHT), tmp2, by = "STRATUM_CN") %>% # join to POP_STATUM values
+mutate(var_tre = ((tre_s2 - STRATUM_PLOT_COUNT * ((tre_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))),
+       TRE_pop =  ESTN_UNIT_ACRES * STRATUM_WEIGHT * tre_s/ STRATUM_PLOT_COUNT,
+       TRE_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_tre) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_tre)) # calculate stratum-damage variance
+
+tmp4 <- tmp3 %>% group_by(COMMON_NAME, STATUSCD) %>% 
+                  summarize(TRE_POP = sum(TRE_pop, na.rm = T),
+                  TRE_VAR = sum(TRE_var, na.rm = T),
+                  .groups = 'drop') %>%
+                group_by(COMMON_NAME) %>%
+                mutate(SPP_TRE_POP = sum(TRE_POP)) %>%
+                ungroup() %>%
+                mutate(TRE_STND_ERR = sqrt(TRE_VAR),
+                  SPP_STCD_TRE_PCT = (TRE_POP/SPP_TRE_POP)*100)
+
+tmp5 <- select(filter(tmp4, STATUSCD == 2), COMMON_NAME, TRE_POP, TRE_STND_ERR, SPP_STCD_TRE_PCT) %>% 
+    arrange(desc(TRE_POP))
+
+#---#---#---#---#---#---#---#---#---#---
+# Total dead for total row
+# filter out dead and down trees
+
+tmp6 <- filter(FIATree, STATUSCD == 2 & (STANDING_DEAD_CD == 1 | is.na(STANDING_DEAD_CD)))  %>% 
+  group_by(STRATUM_LABEL, STRATUM_CN, PLT_CN) %>%
+          summarize(TRE_ADJ = sum(TREE_ADJ), #sum to plot - sample unit
+                    .groups = 'drop')  %>% 
+          group_by(STRATUM_LABEL, STRATUM_CN) %>%
+          summarize(tre_s = sum(TRE_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+                    tre_s2 = sum(TRE_ADJ^2), # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)) 
+                    .groups = 'drop')
+
+tmp7 <-  right_join(select(Stratum, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_CN, STRATUM_PLOT_COUNT, STRATUM_WEIGHT), tmp6, by = "STRATUM_CN") %>% # join to POP_STATUM values
+mutate(var_tre = ((tre_s2 - STRATUM_PLOT_COUNT * ((tre_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))),
+       TRE_pop =  ESTN_UNIT_ACRES * STRATUM_WEIGHT * tre_s/ STRATUM_PLOT_COUNT,
+       TRE_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_tre) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_tre)) # calculate stratum-damage variance
+
+tmp8 <- tmp7 %>% group_by(EVALID) %>% 
+                  summarize(TRE_POP = sum(TRE_pop, na.rm = T),
+                  TRE_VAR = sum(TRE_var, na.rm = T),
+                  .groups = 'drop') %>%
+                mutate(TRE_STND_ERR = sqrt(TRE_VAR),
+                       COMMON_NAME = 'Total',
+                       SPP_STCD_TRE_PCT = TRE_POP/sum(tmp1$TREES_PER_PLOT)*100) #tmp1 has live and standing dead trees
+
+#---#---#---#---#---#---#---#---#---#---
+#Add total row
+tmp9 <- rbind(tmp5, tmp8[c(5,2,4,6)])
+
+#tmp9[-1] <- apply(tmp9[-1], FUN = roundBM_PCT, MARGIN = c(1,2))
+
+tmp9$TRE_POP<-format(round(tmp9$TRE_POP, digits=0), big.mark=",")
+tmp9$TRE_STND_ERR<-format(round(tmp9$TRE_STND_ERR, digits=0),big.mark=",")
+tmp9$SPP_STCD_TRE_PCT<-format(round(tmp9$SPP_STCD_TRE_PCT, digits=1), big.mark=",")
+
+a <- nrow(tmp9)
+
+options(knitr.kable.NA = '--')
+
+tim10 <-  kable(tmp9, 
+       format = "html",
+       booktabs = TRUE,
+# caption= tab.10_cap,
+       col.names = (c("Common name", "Standing dead trees (number)","Standard error (number)", "Percent of species")) ,
+       align=c("l","r", "r", "r"),
+       linesep="",
+       row.names = FALSE) %>%
+   kable_styling(latex_options="HOLD_position")%>%
+      row_spec(0, bold = TRUE) %>%
+    row_spec(a, bold = TRUE) %>%
+    footnote(general = "Due to rounding, not all values will add up exactly.", general_title = "", threeparttable = TRUE)
+  
+tim10
+
+rm(tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7, tmp8, tmp9)  
+```
+
+## Table 11: Net cubic-foot volume for tree species with greatest net volume `r city_name`, `r report_year`
+
+```{r, Table 11: Net cubic-foot volume for tree species with greatest net volume, echo=FALSE, warning=FALSE, message=FALSE, error=FALSE}
+
+#---#---#---#---#---#---#---#---#---#---#---#--#---#---#
+# Total trees per STRATUM and SPECIES with SE
+
+#live trees 
+tmp1 <-  filter(FIATree, STATUSCD == 1) %>% 
+          group_by(STRATUM_LABEL, STRATUM_CN, COMMON_NAME, PLT_CN) %>%
+          summarize(VOL_ADJ = sum(CF_NET_VOLUME_ADJ, na.rm = T),
+                    .groups = 'drop') %>%
+          group_by(STRATUM_LABEL, STRATUM_CN, COMMON_NAME) %>%
+          summarize(tre_s = sum(VOL_ADJ, na.rm = T), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+                    tre_s2 = sum(VOL_ADJ^2, na.rm = T), # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)
+                    .groups = 'drop') %>% 
+          ungroup()
+
+tmp2 <- full_join(select(Stratum, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_CN, STRATUM_PLOT_COUNT, STRATUM_WEIGHT), tmp1, by = "STRATUM_CN") %>% # join to POP_STATUM values
+mutate(var_tre = ((tre_s2 - STRATUM_PLOT_COUNT * ((tre_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))),
+       TRE_pop = ESTN_UNIT_ACRES * STRATUM_WEIGHT * tre_s/ STRATUM_PLOT_COUNT,
+       TRE_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_tre) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_tre)) # calculate stratum-landuse variance
+
+tmp3 <- tmp2 %>% group_by(COMMON_NAME) %>% summarize(TRE_pop = sum(TRE_pop, na.rm = T), .groups = 'drop')  %>% top_n(n = 10, TRE_pop)
+
+tmp2$vol_spp <- ifelse(tmp2$COMMON_NAME %in% tmp3$COMMON_NAME, paste(tmp2$COMMON_NAME), "Other species")
+
+tmp4 <- tmp2 %>%
+            group_by(vol_spp) %>%
+            summarize(TRE_POP = sum(TRE_pop, na.rm = T),
+                      TRE_VAR = sum(TRE_var, na.rm = T),
+                      .groups = 'drop') %>%
+            mutate(TRE_STND_ERR = sqrt(TRE_VAR),
+                   TRE_POP_PCT = TRE_POP/sum(TRE_POP)*100)
+
+#---#---#---#---#---#---#---#---#---#---#---#--#---#---#
+# Total and standard error net volume for total row 
+
+tmp5 <-  filter(FIATree, STATUSCD == 1) %>% 
+          group_by(STRATUM_CN,PLT_CN) %>%
+          summarize(VOL_ADJ = sum(CF_NET_VOLUME_ADJ),
+                    .groups = 'drop') %>%
+          group_by(STRATUM_CN) %>%
+          summarize(tre_s = sum(VOL_ADJ, na.rm = T), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+                    tre_s2 = sum(VOL_ADJ^2, na.rm = T), # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)
+                    .groups = 'drop')  
+
+
+tmp6 <- full_join(select(Stratum, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_CN, STRATUM_PLOT_COUNT, STRATUM_WEIGHT), tmp5, by = "STRATUM_CN") %>% # join to POP_STATUM values
+mutate(var_tre = ((tre_s2 - STRATUM_PLOT_COUNT * ((tre_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))),
+       TRE_pop = ESTN_UNIT_ACRES * STRATUM_WEIGHT * tre_s/ STRATUM_PLOT_COUNT,
+       TRE_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_tre) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_tre))
+
+tmp7 <- tmp6 %>%
+            group_by(EVALID) %>%
+            summarize(TRE_POP = sum(TRE_pop, na.rm = T),
+                      TRE_VAR = sum(TRE_var, na.rm = T)) %>%
+            mutate(TRE_STND_ERR = sqrt(TRE_VAR),
+                   TRE_POP_PCT = TRE_POP/sum(TRE_POP)*100)
+
+#---#---#---#---#---#---#---#---#---#---#---#--#---#---#
+
+names(tmp7)[1] <- "vol_spp"
+tmp7[1] <- "Total"
+
+# Ensure that the ordering of the rows is correct - individual species (desc), other species, total
+tmp8 <- filter(tmp4, vol_spp == "Other species")
+tmp9 <- filter(tmp4, vol_spp != "Other species") %>% arrange(-TRE_POP)
+
+#paste together
+tmp10 <- rbind(tmp9, tmp8)
+cfnetvoltab <- rbind(tmp10, tmp7)
+cfnetvoltab <- cfnetvoltab[,-3]
+
+# Rounding
+#cfnetvoltab[-1] <- apply(cfnetvoltab[-1], FUN = roundBM_PCT, MARGIN = c(1,2))
+cfnetvoltab$TRE_POP_PCT<-format(round(cfnetvoltab$TRE_POP_PCT, digits=1), big.mark=",")
+
+
+
+a <- nrow(cfnetvoltab)
+
+tim11 <-  kable(cfnetvoltab, format = "html",
+       booktabs = TRUE,
+# caption= tab.11_cap,
+       col.names = c("Common name ", "Net volume (cubic feet)","Standard error (cubic feet)", "Net volume (percent)"),
+       format.args = list(big.mark = ','),
+       digits=c(0,0,0,1),
+       align=c("l","r","r", "r"),
+       linesep="") %>%
+   kable_styling(latex_options="HOLD_position") %>%
+    row_spec(0, bold = TRUE ) %>%
+    row_spec(a, bold = T) %>%
+  footnote(general = c("Due to rounding, not all values will add up exactly."), general_title = "")
+
+tim11
+
+  rm(tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7, tmp8, tmp9, tmp10, cfnetvoltab, a)
+```
+
+## Table 12: Aboveground biomass for tree species with greatest biomass in `r city_name`, `r report_year`
+
+```{r,  Table 12: Aboveground biomass (green tons) for tree species with greatest biomass, echo=FALSE, warning=FALSE, message=FALSE, error=FALSE}
+
+#---#---#---#---#---#---#---#---#---#---
+# Total trees and standard error per SPECIES 
+tmp1 <-  GreenTon %>% 
+          group_by(STRATUM_LABEL, STRATUM_CN, COMMON_NAME, PLT_CN) %>%
+          summarize(GT_ADJ = sum(GREEN_TONS_ADJ), 
+                    .groups = 'drop') %>%   
+          group_by(STRATUM_LABEL, STRATUM_CN, COMMON_NAME) %>%
+          summarize(tre_s = sum(GT_ADJ), #sum trees per stratum-species group; used to calculate P_hd (eq. 4.3)
+                    tre_s2 = sum(GT_ADJ^2), # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)
+                    .groups = 'drop') %>% 
+                    ungroup()
+
+tmp2 <- full_join(select(Stratum, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_CN, STRATUM_PLOT_COUNT, STRATUM_WEIGHT), tmp1, by = "STRATUM_CN") %>% # join to POP_STATUM values
+mutate(var_tre = ((tre_s2 - STRATUM_PLOT_COUNT * ((tre_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))),
+       TRE_pop = ESTN_UNIT_ACRES * STRATUM_WEIGHT * tre_s/ STRATUM_PLOT_COUNT,
+       TRE_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_tre) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_tre)) # calculate stratum-species variance
+
+tmp3 <- tmp2 %>% group_by(COMMON_NAME) %>% summarize(TRE_pop = sum(TRE_pop, na.rm = T), .groups = 'drop') %>% top_n(n = 10, wt = TRE_pop)
+
+tmp2$green_spp <- ifelse(tmp2$COMMON_NAME %in% tmp3$COMMON_NAME, paste(tmp2$COMMON_NAME), "Other species")
+
+tmp4 <- tmp2 %>%
+            group_by(green_spp) %>%
+            summarize(TRE_POP = sum(TRE_pop, na.rm = T),
+                      TRE_VAR = sum(TRE_var, na.rm = T),
+                      .groups = 'drop') %>%
+            mutate(TRE_STND_ERR = sqrt(TRE_VAR),
+                   TRE_POP_PCT = TRE_POP/sum(TRE_POP)*100)
+
+tmp4 <- tmp4[-3]
+#ensure 'other species' is on bottom
+tmp5 <- filter(tmp4, green_spp != 'Other species') %>% arrange(desc(TRE_POP))
+tmp6 <- filter(tmp4, green_spp == 'Other species')
+
+#---#---#---#---#---#---#---#---#---#---
+# Total biomass and standard errors for total row
+
+tmp7 <-  GreenTon %>% 
+          group_by(STRATUM_LABEL, STRATUM_CN, PLT_CN) %>%
+          summarize(GT_ADJ = sum(GREEN_TONS_ADJ), 
+                    .groups = 'drop') %>%   
+          group_by(STRATUM_LABEL, STRATUM_CN) %>%
+          summarize(tre_s = sum(GT_ADJ), #sum trees per stratum-species group; used to calculate P_hd (eq. 4.3)
+                    tre_s2 = sum(GT_ADJ^2), # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)
+                    .groups = 'drop') %>% 
+                    ungroup()
+
+tmp8 <-
+  full_join(
+    select(
+      Stratum,
+      EVALID,
+      ESTN_UNIT_ACRES,
+      ESTN_UNIT_PLOT_COUNT,
+      STRATUM_LABEL,
+      STRATUM_CN,
+      STRATUM_PLOT_COUNT,
+      STRATUM_WEIGHT
+    ),
+    tmp7,
+    by = "STRATUM_CN"
+  ) %>% # join to POP_STATUM values
+  mutate(
+    var_tre = ((tre_s2 - STRATUM_PLOT_COUNT * ((tre_s / STRATUM_PLOT_COUNT) ^2
+    )) / (
+      STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT - 1)
+    )),
+    TRE_pop = ESTN_UNIT_ACRES * STRATUM_WEIGHT * tre_s / STRATUM_PLOT_COUNT,
+    TRE_var = (ESTN_UNIT_ACRES ^ 2 / ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_tre) +
+      (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_tre
+  )) # calculate stratum-species variance
+
+tmp9 <- tmp8 %>%
+            group_by(EVALID) %>%
+            summarize(TRE_POP = sum(TRE_pop, na.rm = T),
+                      TRE_VAR = sum(TRE_var, na.rm = T),
+                      .groups = 'drop') %>%
+            mutate(TRE_STND_ERR = sqrt(TRE_VAR),
+                   TRE_POP_PCT = TRE_POP/sum(TRE_POP)*100)
+
+#---#---#---#---#---#---#---#---#---#---
+
+tmp9 <- tmp9[-3]
+names(tmp9)[1] <- "green_spp"
+tmp9$green_spp <- "Total"
+
+greentab <- rbind(tmp5, tmp6, tmp9)
+
+#greentab[-1] <- apply(greentab[-1], FUN = roundBM_PCT, MARGIN = c(1,2))
+
+a <- nrow(greentab)
+
+
+tim12<-kable(greentab, format = "html",
+       booktabs = TRUE,
+       digits=c(0, 0, 0, 1),
+# caption=tab.12_cap,
+       col.names = c("Common name", "Biomass (green tons)", "Standard error (green tons)", "Biomass (percent)"),
+       format.args = list(big.mark = ','),
+       align=c("l","r","r", "r"),
+       linesep=""
+      ) %>%
+   kable_styling(latex_options="HOLD_position") %>%
+   row_spec(0,bold = TRUE) %>%
+  row_spec(a, bold = TRUE) %>%
+  footnote(general = c("Due to rounding, not all values will add up exactly."), general_title = "")
+
+tim12
+
+rm(tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7, tmp8, tmp9,  a, greentab)
+```
+
+## Table 13: List of all live tree species and their characteristics, `r city_name`, `r report_year`
+
+```{r, Table 13: Tree diameter information for live trees by species, echo=FALSE, warning=FALSE, message=FALSE, error=FALSE}
+
+# live trees
+sppdia1 <- select(filter(FIATree, STATUSCD ==1), GENUS, SPECIES, COMMON_NAME, TREES_PER_PLOT, DIA_cat) %>% pivot_wider(names_from = DIA_cat, values_from = TREES_PER_PLOT, values_fn = list(TREES_PER_PLOT = sum), values_fill = list(TREES_PER_PLOT =0)) %>% arrange(GENUS, SPECIES)
+
+# mean and median diameter for population level estimates
+# weighted means/medians
+sppdia2 <- select(filter(FIATree, STATUSCD ==1), GENUS, SPECIES, COMMON_NAME, DIA, TREES_PER_PLOT) %>% group_by(GENUS, SPECIES, COMMON_NAME) %>% summarize(average = mean(sum(DIA*TREES_PER_PLOT)/sum(TREES_PER_PLOT)), .groups = 'drop') 
+
+#All tree median and mead DIA for total row
+totmean <- filter(FIATree, STATUSCD ==1) %>% summarize(mean_dia = mean(sum(DIA * TREES_PER_PLOT)/sum(TREES_PER_PLOT)))
+
+#---#---#---#---#---#---#---#---#---#---
+# Species sums and standard errors
+tmp1 <- filter(FIATree, STATUSCD ==1) %>% group_by(GENUS, SPECIES, COMMON_NAME, STRATUM_LABEL, STRATUM_CN, PLT_CN) %>%
+          summarize(TRE_ADJ = sum(TREE_ADJ),
+                    .groups = 'drop') %>%
+          group_by(GENUS, SPECIES, COMMON_NAME, STRATUM_LABEL, STRATUM_CN) %>%
+          summarize(tot_s = sum(TRE_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+                    tot_s2 = sum(TRE_ADJ^2), # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)
+                    .groups = 'drop')
+  
+tmp2 <-  right_join(select(Stratum, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_CN, STRATUM_PLOT_COUNT, STRATUM_WEIGHT), tmp1, by = "STRATUM_CN") %>% # join to POP_STATUM values
+mutate(var_tot = ((tot_s2 - STRATUM_PLOT_COUNT * ((tot_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))), # v(P_hd) eq 4.4
+       TOT_pop = ESTN_UNIT_ACRES * STRATUM_WEIGHT * tot_s/ STRATUM_PLOT_COUNT,
+       TOT_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_tot) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_tot)) # calculate species - stratum variance
+
+tmp3 <- tmp2 %>% group_by(GENUS, SPECIES, COMMON_NAME) %>% 
+                  summarize(TOT_POP = sum(TOT_pop, na.rm = T),
+                  TOT_VAR = sum(TOT_var, na.rm = T),
+                  .groups = 'drop'
+                    ) %>% 
+                  mutate(TOT_POP_PCT = (TOT_POP/sum(TOT_POP)*100),
+                    TOT_STND_ERR = sqrt(TOT_VAR)) # species SE
+#---#---#---#---#---#---#---#---#---#---
+
+#---#---#---#---#---#---#---#---#---#---
+# Total sums and standard errors for total row
+tmp4 <- filter(FIATree, STATUSCD ==1) %>% group_by(STRATUM_LABEL, STRATUM_CN, PLT_CN) %>%
+          summarize(TRE_ADJ = sum(TREE_ADJ),
+                    .groups = 'drop') %>%
+          group_by(STRATUM_LABEL, STRATUM_CN) %>%
+          summarize(tot_s = sum(TRE_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+                    tot_s2 = sum(TRE_ADJ^2), # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)
+                    .groups = 'drop')
+
+tmp5 <-  right_join(select(Stratum, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_CN, STRATUM_PLOT_COUNT, STRATUM_WEIGHT), tmp4, by = "STRATUM_CN") %>% # join to POP_STATUM values
+mutate(var_tot = ((tot_s2 - STRATUM_PLOT_COUNT * ((tot_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))), # v(P_hd) eq 4.4
+       TOT_pop = ESTN_UNIT_ACRES * STRATUM_WEIGHT * tot_s/ STRATUM_PLOT_COUNT,
+       TOT_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_tot) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_tot)) # calculate species - stratum variance
+
+tmp6 <- tmp5 %>% group_by (EVALID) %>% summarize(TOT_POP = sum(TOT_pop, na.rm = T),
+                  TOT_VAR = sum(TOT_var, na.rm = T),
+                  .groups = 'drop'
+                    ) %>% 
+                  mutate(TOT_STND_ERR = sqrt(TOT_VAR))
+#---#---#---#---#---#---#---#---#---#---
+
+#piecing it together
+tmp7 <- select(sppdia1, GENUS, SPECIES, COMMON_NAME, sapling, medium, large) %>% 
+  left_join(select(tmp3, GENUS, SPECIES, COMMON_NAME, TOT_POP, TOT_POP_PCT, TOT_STND_ERR), by = c("GENUS", "SPECIES", "COMMON_NAME")) %>%
+left_join(sppdia2,  by = c("GENUS", "SPECIES", "COMMON_NAME"))
+
+#---#---#---#---#---#---#---#---#---#---
+# Add superscript for invasive species
+invasive_supers <- function(name) {
+if(name %in% Invasive$COMMON_NAME) 
+ {name <- paste(name, "^a^", sep="")} 
+  return(name)
+}
+
+
+
+
+tmp7[3] <- apply(tmp7[3], FUN = invasive_supers, MARGIN = c(1,2))
+
+# Add superscript for woodland species
+woodland <- filter(FIATree, !is.na(WOODLAND))
+
+woodland_supers <- function(name) {
+if(name %in% woodland$COMMON_NAME) 
+ {name <- paste(name, "^b^", sep="")} 
+  return(name)
+}
+
+tmp7[3] <- apply(tmp7[3], FUN = woodland_supers, MARGIN = c(1,2))
+#---#---#---#---#---#---#---#---#---#---
+
+#Total column
+sppsumtab <- rbind(tmp7, data.frame(GENUS ="Total", SPECIES="", COMMON_NAME ="", sapling =sum(tmp7$sapling), medium = sum(tmp7$medium), large = sum(tmp7$large), TOT_POP=sum(tmp7$TOT_POP), TOT_POP_PCT =sum(tmp7$TOT_POP_PCT), TOT_STND_ERR = tmp6$TOT_STND_ERR, average = totmean$mean_dia))
+
+# Custom rounding
+sppsumtab$sapling <-as.character(format(round(as.numeric(sppsumtab$sapling), digits=0), big.mark=","))
+sppsumtab$medium   <-as.character(format(round(as.numeric(sppsumtab$medium  ), digits=0), big.mark=","))
+sppsumtab$large  <-as.character(format(round(as.numeric(sppsumtab$large ), digits=0), big.mark=","))
+sppsumtab$TOT_POP  <-as.character(format(round(as.numeric(sppsumtab$TOT_POP ), digits=0), big.mark=","))
+sppsumtab$TOT_POP_PCT  <-as.character(format(round(as.numeric(sppsumtab$TOT_POP_PCT ), digits=1), big.mark=","))
+sppsumtab$TOT_STND_ERR <-as.character(format(round(as.numeric(sppsumtab$TOT_STND_ERR), digits=0), big.mark=","))
+sppsumtab$average <-as.character(format(round(as.numeric(sppsumtab$average), digits=1), big.mark=","))
+
+
+# Table properties 
+a <- nrow(sppsumtab)
+
+
+tim13 <- kable(sppsumtab, format = "html",
+      escape=FALSE,
+      booktabs = TRUE,
+      longtable = TRUE,
+  # caption= tab.13_cap,
+      col.names = (c(colnames <- c("Genus", "Species", "Common name", "1-4.9 in. diameter trees (number)", "5-10.9 in. diameter trees (number)", "11+ in. diameter trees (number)", "Total (number)","Total (percent)", "Total standard error (number)", "Average diameter (inches)"))),
+      align=c("l","l","l","r","r","r","r","r","r", "r"),
+      format.args = list(big.mark = ','),
+      linesep="") %>%
+    kable_styling(latex_options=c("HOLD_POSITION"))%>%
+    row_spec(0, bold=TRUE, hline=FALSE) %>%
+    row_spec(a, bold = TRUE) %>%
+    column_spec(c(1,2), width = "7em", italic=TRUE) %>%
+   column_spec(c(3), width = "7em") %>%
+    column_spec(c(4), width = "5em") %>%
+    column_spec(c(5,6,9), width = "4em") %>%
+    column_spec(7, width = "5em") %>%
+    column_spec(c(8, 10), width = "1.5em") %>%
+    footnote(general = c("Due to rounding, not all values will add up exactly.","Diameter measurements were taken at breast height (d.b.h.) or root collar (d.r.c.) for woodland species. Median and average diameter measurements are estimated for live trees only."),  alphabet= c("Invasive species.", "Woodland species."), general_title = "", threeparttable=TRUE, escape = FALSE)
+
+
+tim13
+
+rm(sppdia1, sppdia2, sppsumtab, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7, totmean, totmedian, a)
+```
+
+## Table 14: Percent of live trees identified with urban damages, `r city_name`, `r report_year`
+
+```{r, Table 14: Percent of live trees identified with urban damages, echo=FALSE, warning=FALSE, message=FALSE, error=FALSE}
+
+# live trees
+tmp1 <- UrbanDamage %>%
+  group_by(SPCD, COMMON_NAME) %>%
+  summarize(
+    sample = n_distinct(MTRE_CN),
+    ROOT_STEM = sum(ROOT_STEM_GIRDLING * TREES_PER_PLOT, na.rm = T) / sum(TREES_PER_PLOT) *
+      100,
+    TRUNK_BARK = sum(TRUNK_BARK_INCLUSION * TREES_PER_PLOT, na.rm = T) / sum(TREES_PER_PLOT) *
+      100,
+    TOPPING = sum(TOPPING_PRUNING * TREES_PER_PLOT, na.rm = T) / sum(TREES_PER_PLOT) *
+      100,
+    MULCH = sum(EXCESS_MULCH * TREES_PER_PLOT, na.rm = T) / sum(TREES_PER_PLOT) *
+      100,
+    SIDEWALK = sum(SIDEWALK_ROOT_CONFLICT * TREES_PER_PLOT, na.rm = T) / sum(TREES_PER_PLOT) *
+      100,
+    WIRES = sum(OVERHEAD_WIRES * TREES_PER_PLOT, na.rm = T) / sum(TREES_PER_PLOT) *
+      100,
+    IMPROPER = sum(IMPROPER_PLANTING * TREES_PER_PLOT, na.rm = T) / sum(TREES_PER_PLOT) *
+      100,
+    .groups = 'drop'
+  ) %>% 
+  mutate(urban_damage_filter = rowSums(select(., ROOT_STEM:IMPROPER), na.rm = T)) %>%
+  arrange(COMMON_NAME)
+
+urbandamagetab <- filter(tmp1, urban_damage_filter > 0)
+urbandamagetab <- urbandamagetab[-c(1,11)]
+
+
+tim14<-kable(urbandamagetab, format = "html",
+       booktabs = TRUE,
+       longtable = T,
+       digits=c(0,0,1,1,1,1,1,1,1),
+# caption= tab.14_cap,
+       col.names = (c("Species", "Sample (number)", "Root/stem girdling (percent)", "Trunk/bark inclusion (percent)", "Topping/pruning (percent)", "Excess mulch (percent)", "Root conflict (percent)", "Crown conflict (percent)","Improper planting (percent)")),
+       align=(c("l","c","r","r", "r", "r", "r", "r", "r")),
+       linesep="") %>%
+    column_spec(1, width = "1.5in") %>%
+    kable_styling(latex_options=c("HOLD_position"))%>%
+    row_spec(0, bold=TRUE) %>%
+    footnote(general="This table includes only the live tree population.", general_title="", threeparttable=TRUE)
+
+tim14
+
+rm(tmp1, urbandamagetab)
+```
+
+## Table 15: Number of live trees by urban damage type, `r city_name`, `r report_year`
+
+```{r, Table 15: Trees by urban damage type, echo=FALSE, warning=FALSE, message=FALSE, error=FALSE}
+
+#---#---#---#---#---#---#---#---#---#---
+#live trees
+# Number of trees by urban damage and standard error
+
+tmp1 <- UrbanDamage %>% 
+  pivot_longer(cols = ROOT_STEM_GIRDLING:IMPROPER_PLANTING, names_to = "URBANDAMAGE", values_to = "PRESENCE") %>%
+  filter(., PRESENCE == 1) 
+
+# Rename urban damages
+tmp1$URBANDAMAGE <- revalue(tmp1$URBANDAMAGE, replace = c("IMPROPER_PLANTING" = "Improper planting", "OVERHEAD_WIRES" = "Tree crown conflict", "ROOT_STEM_GIRDLING" = "Root/Stem girdling", "SIDEWALK_ROOT_CONFLICT" = "Root conflict", "TOPPING_PRUNING" = "Topping/Pruning", "TRUNK_BARK_INCLUSION" = "Bark inclusion", "EXCESS_MULCH" = "Excess mulch"))
+
+tmp2 <- tmp1 %>% group_by(URBANDAMAGE, STRATUM_CN, PLT_CN) %>%
+          summarize(TRE_ADJ = sum(TREE_ADJ),
+                    .groups = 'drop') %>% #sum to plot - sample unit
+          group_by(URBANDAMAGE, STRATUM_CN) %>%
+          summarize(tre_s = sum(TRE_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+                    tre_s2 = sum(TRE_ADJ^2), # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)) 
+                    .groups = 'drop')  
+
+
+tmp3 <-  right_join(select(Stratum, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_PLOT_COUNT, STRATUM_WEIGHT, STRATUM_CN), tmp2, by = "STRATUM_CN") %>% # join to POP_STATUM values
+mutate(var_tre = ((tre_s2 - STRATUM_PLOT_COUNT * ((tre_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))),
+       TRE_pop =  ESTN_UNIT_ACRES * STRATUM_WEIGHT * tre_s/ STRATUM_PLOT_COUNT,
+       TRE_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_tre) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_tre)) # calculate stratum-damage variance
+
+tmp4 <- tmp3 %>% group_by(URBANDAMAGE) %>% 
+                  summarize(TRE_POP = sum(TRE_pop, na.rm = T),
+                  TRE_VAR = sum(TRE_var, na.rm = T)) %>%
+                ungroup() %>%
+                mutate(TRE_STND_ERR = sqrt(TRE_VAR),
+                       TRE_PCT_WHOLE_POP = (TRE_POP/sum(filter(iTreeTree, STATUSCD == 1)$TREES_PER_PLOT))*100) %>%
+                arrange(URBANDAMAGE)
+
+#---#---#---#---#---#---#---#---#---#---
+# Total damage trees - total row
+
+tmp5 <- tmp1 %>% group_by(STRATUM_CN, PLT_CN) %>%
+          summarize(TRE_ADJ = sum(TREE_ADJ))  %>% #sum to plot - sample unit
+          ungroup() %>%
+          group_by(STRATUM_CN) %>%
+          summarize(tre_s = sum(TRE_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+                    tre_s2 = sum(TRE_ADJ^2)) %>% # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)) 
+                    ungroup()
+
+tmp6 <-  right_join(select(Stratum, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_PLOT_COUNT, STRATUM_WEIGHT, STRATUM_CN), tmp5, by = "STRATUM_CN") %>% # join to POP_STATUM values
+mutate(var_tre = ((tre_s2 - STRATUM_PLOT_COUNT * ((tre_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))),
+       TRE_pop =  ESTN_UNIT_ACRES * STRATUM_WEIGHT * tre_s/ STRATUM_PLOT_COUNT,
+       TRE_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_tre) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_tre)) # calculate stratum-damage variance
+
+tmp7 <- tmp6%>% group_by(EVALID) %>% 
+                  summarize(TRE_POP = sum(TRE_pop, na.rm = T),
+                  TRE_VAR = sum(TRE_var, na.rm = T)) %>%
+                ungroup() %>%
+                mutate(TRE_STND_ERR = sqrt(TRE_VAR),
+                       URBANDAMAGE = 'Total',
+                       TRE_PCT_WHOLE_POP = (TRE_POP/sum(filter(FIATree, STATUSCD ==1)$TREES_PER_PLOT))*100) 
+
+#---#---#---#---#---#---#---#---#---#---
+#Add total row
+
+tmp8 <- rbind(tmp4[-3], tmp7[c(5,2,4,6)])
+#---#---#---#---#---#---#---#---#---#---
+
+
+a <- nrow(tmp8)
+
+options(knitr.kable.NA = '--')
+
+tim15<-kable(tmp8, format = "html",
+       booktabs = TRUE,
+       longtable = T,
+       digits=c(0,0,0,1),
+  # caption= tab.15_cap,
+       col.names = (c("Urban damage", "Damaged trees (number)", "Standard Error (number)", "Percent of live trees")),
+       align=(c("l","r","r", "r")),
+       format.args = list(big.mark = ','),
+       linesep="") %>%
+    column_spec(1, width = "1.5in") %>%
+    kable_styling(latex_options=c("HOLD_position"))%>%
+    row_spec(0, bold=TRUE) %>%
+  
+    row_spec(a, bold=TRUE) %>%
+    footnote(general="This table includes only the live tree population.", general_title="", threeparttable=TRUE)
+
+tim15
+
+rm(tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7, tmp8, a)
+```
+
+## Table 16: Number of live trees with observed damage, `r city_name`, `r report_year`
+
+```{r, Table 16: FIA damages, echo=FALSE, warning=FALSE, message=FALSE, error=FALSE}
+
+#---#---#---#---#---#---#---#---#---#---
+#live trees only
+# Number of trees per FIA damage
+
+tmp1 <- FIADamage %>% group_by(DAMAGE_GROUP, DAMAGE_AGENT, STRATUM_CN, PLT_CN) %>%
+          summarize(TRE_ADJ = sum(DMG_TREES_ADJ),  #sum to plot - sample unit
+                    .groups = 'drop') %>%        
+          group_by(DAMAGE_GROUP, DAMAGE_AGENT, STRATUM_CN) %>%
+          summarize(tre_s = sum(TRE_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+                    tre_s2 = sum(TRE_ADJ^2),  # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)) 
+                    .groups = 'drop')
+
+tmp2 <-  right_join(select(Stratum, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_PLOT_COUNT, STRATUM_WEIGHT, STRATUM_CN), tmp1, by = "STRATUM_CN") %>% # join to POP_STATUM values
+mutate(var_tre = ((tre_s2 - STRATUM_PLOT_COUNT * ((tre_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))),
+       TRE_pop =  ESTN_UNIT_ACRES * STRATUM_WEIGHT * tre_s/ STRATUM_PLOT_COUNT,
+       TRE_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_tre) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_tre)) # calculate stratum-damage variance
+
+tmp3 <- tmp2 %>% group_by(DAMAGE_GROUP, DAMAGE_AGENT) %>% 
+                  summarize(TRE_POP = sum(TRE_pop, na.rm = T),
+                  TRE_VAR = sum(TRE_var, na.rm = T),
+                  .groups = 'drop') %>%
+                mutate(TRE_STND_ERR = sqrt(TRE_VAR),
+                       TRE_PCT_WHOLE_POP = (TRE_POP/sum(filter(FIATree, STATUSCD == 1)$TREES_PER_PLOT))*100) 
+
+#Other damages are listed seperately at the end
+tmp4 <- filter(tmp3, DAMAGE_GROUP != 'Other Damages and Symptoms') %>% arrange(DAMAGE_AGENT)
+tmp5 <- filter(tmp3, DAMAGE_GROUP == 'Other Damages and Symptoms') %>% arrange(DAMAGE_AGENT)
+
+#Count number of rows for each, to group rows in table
+reg_damages_n <- nrow(tmp4)
+other_grp_n <- nrow(tmp5)
+#Start and end of grouped rows for 'Other' damage group
+other.start <- reg_damages_n + 1
+other.end <-  reg_damages_n + other_grp_n
+
+tmp6 <- rbind(tmp4, tmp5)
+
+
+#---#---#---#---#---#---#---#---#---#---
+# Total damaged trees - for total row
+
+tmp7 <- FIADamage %>% group_by(STRATUM_CN, PLT_CN) %>%
+          summarize(TRE_ADJ = sum(DMG_TREES_ADJ),  #sum to plot - sample unit
+                    .groups = 'drop') %>%        
+          group_by(STRATUM_CN) %>%
+          summarize(tre_s = sum(TRE_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+                    tre_s2 = sum(TRE_ADJ^2),  # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)) 
+                    .groups = 'drop')
+
+tmp8 <-  right_join(select(Stratum, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_PLOT_COUNT, STRATUM_WEIGHT, STRATUM_CN), tmp7, by = "STRATUM_CN") %>% # join to POP_STATUM values
+mutate(var_tre = ((tre_s2 - STRATUM_PLOT_COUNT * ((tre_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))),
+       TRE_pop =  ESTN_UNIT_ACRES * STRATUM_WEIGHT * tre_s/ STRATUM_PLOT_COUNT,
+       TRE_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_tre) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_tre)) # calculate stratum-damage variance
+
+tmp9 <- tmp8 %>% group_by(EVALID) %>% 
+                  summarize(TRE_POP = sum(TRE_pop, na.rm = T),
+                  TRE_VAR = sum(TRE_var, na.rm = T),
+                  .groups = 'drop') %>%
+                mutate(TRE_STND_ERR = sqrt(TRE_VAR),
+                       DAMAGE_AGENT = 'Total',
+                       TRE_PCT_WHOLE_POP = (TRE_POP/sum(filter(FIATree, STATUSCD ==1)$TREES_PER_PLOT))*100) 
+
+
+
+#---#---#---#---#---#---#---#---#---#---
+# Add total row to damages
+
+tmp10 <- rbind(tmp6[-c(1,4)], tmp9[c(5,2,4,6)])   
+  
+#---#---#---#---#---#---#---#---#---#---
+
+a <- nrow(tmp10)
+
+tim16<-  kable(tmp10, format = "html",
+       booktabs = TRUE,
+       digits =c(0,0,0,1),
+  # caption = tab.16_cap,
+       col.names = (c("Damage type","Live trees (number)", "Standard error (number)", "Percent of live trees")) ,
+       align = c("l","r", "r", "r"),
+       format.args = list(big.mark = ','),
+       linesep = "") %>%
+   kable_styling(latex_options="HOLD_position")%>%
+    row_spec(0, bold=TRUE) %>%
+    kableExtra::group_rows("Other Damages and Symptoms", other.start, other.end) %>%
+    row_spec(a, bold=TRUE) %>%
+    footnote(general = c("Due to rounding, not all values will add up exactly."), general_title = "", threeparttable = TRUE)
+
+tim16
+
+  rm(tmp1, tmp2, tmp3, tmp4, tmp5, other_grp_n, reg_damages_n, other.start, other.end, tmp6, tmp7,tmp8,tmp9,tmp10 )
+```
+
+## Table 17: Invasive species by maintained and unmaintained land, `r city_name`, `r report_year`
+
+```{r, Table 17: Invasive species by maintained, echo=FALSE, warning=FALSE, message=FALSE, error=FALSE}
+
+Invasive$MAINTAINED <- factor(Invasive$IS_MAINTAINED_AREA, labels = c("Unmaintained", "Maintained"))  
+
+# Total acres per invasive species by maintenance 
+tmp1 <- Invasive %>% 
+  group_by(COMMON_NAME, MAINTAINED) %>% 
+  summarize(INV_POP = sum(ICOV_ACRES), .groups = 'drop') %>%
+  spread(., key = MAINTAINED, value = INV_POP, fill = 0)
+
+#Add total row to invasive species by maintenance
+tmp2 <- rbind(tmp1, data.frame(COMMON_NAME = "Total", Unmaintained = sum(tmp1$Unmaintained), Maintained = sum(tmp1$Maintained)))
+
+#---#---#---#---#---#---#---#---#---#---
+# Total area and standard errors per species (but not by maintained status)
+
+tmp3 <- select(Invasive, COMMON_NAME, STRATUM_LABEL, STRATUM_CN, ICOV_ADJ, PLT_CN) %>% 
+          group_by(COMMON_NAME, STRATUM_LABEL, STRATUM_CN, PLT_CN) %>%
+          summarize(INV_ADJ = sum(ICOV_ADJ), #sum to plot - sample unit
+                    .groups = 'drop')  %>% 
+          group_by(COMMON_NAME, STRATUM_LABEL, STRATUM_CN) %>%
+          summarize(inv_s = sum(INV_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+                    inv_s2 = sum(INV_ADJ^2),  #TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)) 
+                    .groups = 'drop')
+
+tmp4 <-  right_join(select(Stratum, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_CN, STRATUM_PLOT_COUNT, STRATUM_WEIGHT), tmp3, by = "STRATUM_CN") %>% # join to POP_STATUM values
+mutate(var_inv = ((inv_s2 - STRATUM_PLOT_COUNT * ((inv_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))),
+       INV_pop =  ESTN_UNIT_ACRES * STRATUM_WEIGHT * inv_s/ STRATUM_PLOT_COUNT,
+       INV_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_inv) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_inv)) # calculate stratum-damage variance
+
+tmp5 <- tmp4 %>% group_by(COMMON_NAME) %>% 
+                  summarize(INV_POP_SPP = sum(INV_pop, na.rm = T),
+                  INV_VAR_SPP = sum(INV_var, na.rm = T)) %>%
+                mutate(INV_STND_ERR_SPP = sqrt(INV_VAR_SPP)) 
+
+#---#---#---#---#---#---#---#---#---#---
+
+#---#---#---#---#---#---#---#---#---#---
+# Total area and standard errors per species for TOTAL ROW
+
+tmp6 <- select(Invasive, STRATUM_LABEL, STRATUM_CN, ICOV_ADJ, PLT_CN) %>% 
+          group_by(STRATUM_LABEL, STRATUM_CN, PLT_CN) %>%
+          summarize(INV_ADJ = sum(ICOV_ADJ), #sum to plot - sample unit
+                    .groups = 'drop')  %>% 
+          group_by(STRATUM_LABEL, STRATUM_CN) %>%
+          summarize(inv_s = sum(INV_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+                    inv_s2 = sum(INV_ADJ^2),  #TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)) 
+                    .groups = 'drop')
+
+tmp7 <-  right_join(select(Stratum, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_CN, STRATUM_PLOT_COUNT, STRATUM_WEIGHT), tmp6, by = "STRATUM_CN") %>% # join to POP_STATUM values
+mutate(var_inv = ((inv_s2 - STRATUM_PLOT_COUNT * ((inv_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))),
+       INV_pop =  ESTN_UNIT_ACRES * STRATUM_WEIGHT * inv_s/ STRATUM_PLOT_COUNT,
+       INV_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_inv) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_inv)) # calculate stratum-damage variance
+
+tmp8 <- tmp7 %>% group_by(EVALID) %>% 
+                  summarize(INV_POP_SPP = sum(INV_pop, na.rm = T),
+                  INV_VAR_SPP = sum(INV_var, na.rm = T)) %>%
+                mutate(INV_STND_ERR_SPP = sqrt(INV_VAR_SPP),
+                       COMMON_NAME = 'Total') 
+
+#---#---#---#---#---#---#---#---#---#---
+#Add total row to invasive species areas with standard error
+tmp9 <- rbind(tmp5[-3], tmp8[c(5,2,4)] )
+
+#---#---#---#---#---#---#---#---#---#---
+
+
+# Combine species by maintenance counts (area) with standard errors by species
+tmp10 <- full_join(tmp2, tmp9, by = "COMMON_NAME")
+
+a <- nrow(tmp10)
+
+tim17<-kable(tmp10, 
+       format = "html",
+       booktabs = TRUE,
+  # caption= tab.17_cap,
+       col.names = (c("Common Name", "Unmaintained area (acres)", "Maintained area (acres)", "Total area (acres)", "Standard error (acres)")) ,
+       align=c("l","r", "r", "r", "r"),
+       digits = c(0),
+       linesep="",
+       format.args = list(big.mark = ','),
+       row.names = FALSE) %>%
+   kable_styling(latex_options="HOLD_position")%>%
+      row_spec(0, bold = TRUE) %>%
+    row_spec(a, bold = TRUE) %>%
+    footnote(general = "Due to rounding, not all values will add up exactly.", general_title = "", threeparttable = TRUE)
+
+tim17
+
+rm(tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7, tmp8, tmp9, tmp10 )
+```
+
+# Remeasurement comparison
+
+## Table 18: Sample area and count of plots within FIA land use classes across previous and current measurement periods, `r city_name`, `r report_year`
+
+```{r, Table 18: Plot count and area FIA Land use, current and previous time, echo=FALSE, warning=FALSE, message=FALSE, error=FALSE}
+
+Landuse_prev <- Landuse_prev %>% mutate(LAND_USE_10 = revalue(LAND_USE_UNGROUPED, c("Forest Land" = "Forest land", "Cropland" = "Agriculture", "Pasture" = "Agriculture", "IdleFarmland" = "Agriculture", "Orchard" = "Agriculture", "ChristmasPlantation" = "Agriculture", "WildlifeOpening" = "Agriculture", "Windbreak" = "Agriculture", "NonforestChaparral" = "Rangeland/Chaparral", "Rangeland" = "Rangeland/Chaparral", "Commercial" = "Commercial/Industrial", "Cultural" = "Commercial/Industrial",  "Developed" = "Commercial/Industrial", "Institutional" = "Commercial/Industrial", "MiningWasteland" = "Commercial/Industrial", "Multi-family" = "Multi-family residential", "Recreation" = "Recreation/Cemetery", "Cemetery" = "Recreation/Cemetery", "Park" = "Recreation/Cemetery", "GolfCourse" = "Recreation/Cemetery", "Transportation" = "Rights-of-way", "Utility" = "Rights-of-way", "Other" = "Natural lands", "Nonvegetated" = "Natural lands", "Wetland" = "Natural lands", "Beach" = "Natural lands")))
+
+# Order the landuse levels
+Landuse_prev$LAND_USE_10 <- ordered(Landuse_prev$LAND_USE_10, levels = c("Forest land", "Agriculture", "Rangeland/Chaparral", "Commercial/Industrial", "Multi-family residential", "Residential", "Recreation/Cemetery", "Rights-of-way", "Natural lands", "Water"))
+
+#---#---#---#---#---#---#---#---#---#---
+#---#---#---#---#---#---#---#---#---#---
+# Previous year
+#---#---#---#---#---#---#---#---#---#---
+#---#---#---#---#---#---#---#---#---#---
+
+# Total area per LU with SE
+tmp1<-  Landuse_prev %>%
+          group_by(STRATUM_LABEL, STRATUM_CN, LAND_USE_10, PLT_CN) %>%
+          summarize(PLT_ADJ = sum(ACRES_ADJ),
+                    .groups = 'drop') %>%
+          group_by(STRATUM_LABEL, STRATUM_CN, LAND_USE_10) %>%
+          summarize(plt_s = sum(PLT_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+                    plt_s2 = sum(PLT_ADJ^2), # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)
+                    .groups = 'drop')
+
+tmp2 <- full_join(select(Stratum_prev, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_PLOT_COUNT, STRATUM_WEIGHT, STRATUM_CN), tmp1, by = "STRATUM_CN") %>% # join to POP_STATUM values
+mutate(var_plt = ((plt_s2 - STRATUM_PLOT_COUNT * ((plt_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))), # v(P_hd) eq 4.4
+       PLT_pop = ESTN_UNIT_ACRES * STRATUM_WEIGHT * plt_s/ STRATUM_PLOT_COUNT,
+       PLT_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_plt) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_plt)) # calculate stratum-landuse variance
+
+tmp3 <- tmp2 %>%
+            group_by(LAND_USE_10) %>%
+            summarize(PLT_POP = sum(PLT_pop, na.rm = T),
+                      PLT_VAR = sum(PLT_var, na.rm = T),
+                      PLT_CNT = sum(plt_s),
+                      .groups = 'drop') %>%
+            mutate(PLT_STND_ERR = sqrt(PLT_VAR)) # Area SEs per land use
+
+#---#---#---#---#---#---#---#---#---#---
+
+#---#---#---#---#---#---#---#---#---#---
+# Total area and standard error for All Land (total row)
+tmp4 <- Landuse_prev %>%
+          group_by(STRATUM_LABEL, STRATUM_CN, PLT_CN) %>%
+          summarize(PLT_ADJ = sum(ACRES_ADJ),
+                    .groups = 'drop') %>%
+          group_by(STRATUM_LABEL, STRATUM_CN) %>%
+          summarize(plt_s = sum(PLT_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+                    plt_s2 = sum(PLT_ADJ^2), # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)
+                    .groups = 'drop')
+
+tmp5 <- full_join(select(Stratum_prev, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_PLOT_COUNT, STRATUM_WEIGHT, STRATUM_CN), tmp4, by = "STRATUM_CN") %>% # join to POP_STATUM values
+mutate(var_plt = ((plt_s2 - STRATUM_PLOT_COUNT * ((plt_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))), # v(P_hd) eq 4.4
+       PLT_pop = ESTN_UNIT_ACRES * STRATUM_WEIGHT * plt_s/ STRATUM_PLOT_COUNT,
+       PLT_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_plt) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_plt)) # calculate stratum-landuse variance
+
+tmp6 <- tmp5 %>% group_by(EVALID) %>%
+                  summarize(PLT_POP = sum(PLT_pop, na.rm = T),
+                  PLT_VAR = sum(PLT_var, na.rm = T),
+                  PLT_CNT = sum(plt_s),
+                    .groups = 'drop') %>%
+                  mutate(PLT_STND_ERR = sqrt(PLT_VAR),
+                         LAND_USE_10 = "Total") # Area SE for entire population
+
+
+#---#---#---#---#---#---#---#---#---#---
+#---#---#---#---#---#---#---#---#---#---
+# Current year
+#---#---#---#---#---#---#---#---#---#---
+#---#---#---#---#---#---#---#---#---#---
+
+
+# Total area per LU with SE
+tmp7 <-  Landuse %>%
+          group_by(STRATUM_LABEL, STRATUM_CN, LAND_USE_10, PLT_CN) %>%
+          summarize(PLT_ADJ = sum(ACRES_ADJ),
+                    .groups = 'drop') %>%
+          group_by(STRATUM_LABEL, STRATUM_CN, LAND_USE_10) %>%
+          summarize(plt_s = sum(PLT_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+                    plt_s2 = sum(PLT_ADJ^2), # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)
+                    .groups = 'drop')
+
+tmp8 <- full_join(select(Stratum, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_PLOT_COUNT, STRATUM_WEIGHT, STRATUM_CN), tmp7, by = "STRATUM_CN") %>% # join to POP_STATUM values
+mutate(var_plt = ((plt_s2 - STRATUM_PLOT_COUNT * ((plt_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))), # v(P_hd) eq 4.4
+       PLT_pop = ESTN_UNIT_ACRES * STRATUM_WEIGHT * plt_s/ STRATUM_PLOT_COUNT,
+       PLT_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_plt) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_plt)) # calculate stratum-landuse variance
+
+tmp9 <- tmp8 %>%
+            group_by(LAND_USE_10) %>%
+            summarize(PLT_POP = sum(PLT_pop, na.rm = T),
+                      PLT_VAR = sum(PLT_var, na.rm = T),
+                      PLT_CNT = sum(plt_s),
+                      .groups = 'drop') %>%
+            mutate(PLT_STND_ERR = sqrt(PLT_VAR)) # Area SEs per land use
+
+#---#---#---#---#---#---#---#---#---#---
+
+#---#---#---#---#---#---#---#---#---#---
+# Total area and standard error for All Land (total row)
+tmp10 <- Landuse %>%
+          group_by(STRATUM_LABEL, STRATUM_CN, PLT_CN) %>%
+          summarize(PLT_ADJ = sum(ACRES_ADJ),
+                    .groups = 'drop') %>%
+          group_by(STRATUM_LABEL, STRATUM_CN) %>%
+          summarize(plt_s = sum(PLT_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+                    plt_s2 = sum(PLT_ADJ^2), # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)
+                    .groups = 'drop')
+
+tmp11 <- full_join(select(Stratum, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_PLOT_COUNT, STRATUM_WEIGHT, STRATUM_CN), tmp10, by = "STRATUM_CN") %>% # join to POP_STATUM values
+mutate(var_plt = ((plt_s2 - STRATUM_PLOT_COUNT * ((plt_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))), # v(P_hd) eq 4.4
+       PLT_pop = ESTN_UNIT_ACRES * STRATUM_WEIGHT * plt_s/ STRATUM_PLOT_COUNT,
+       PLT_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_plt) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_plt)) # calculate stratum-landuse variance
+
+tmp12 <- tmp11 %>% group_by(EVALID) %>%
+                  summarize(PLT_POP = sum(PLT_pop, na.rm = T),
+                  PLT_VAR = sum(PLT_var, na.rm = T),
+                  PLT_CNT = sum(plt_s),
+                    .groups = 'drop') %>%
+                  mutate(PLT_STND_ERR = sqrt(PLT_VAR),
+                         LAND_USE_10 = "Total") # Area SE for entire population
+
+#---#---#---#---#---#---#---#---#---#---
+# Adding total rows to dataframe
+tmp13 <- rbind(tmp3[c(1:2,5,4)], tmp6[c(6,2,5,4)])
+tmp14 <- rbind(tmp9[c(1:2,5,4)], tmp12[c(6,2,5,4)])
+#---#---#---#---#---#---#---#---#---#---
+
+tmp15 <- full_join(tmp13, tmp14, by = c("LAND_USE_10"), suffix = c(".p", ".c"))
+
+a <- nrow(tmp15)
+
+
+
+tim18<-kable(tmp15, format = "html",
+       booktabs = TRUE,
+       digits=c(0,0,0,1,0,0,1),
+       col.names = (c("FIA land use", "Area in 2018 (acres)", "Standard error (acres)", "Plots (number)", "Area in 2019 (acres)", "Standard error (acres)", "Plots (number)")),
+  # caption=tab.18_cap,
+       format.args = list(big.mark = ','),
+       align=c("l", "r","r","r", "r", "r", "r"), linesep="") %>%
+  kable_styling(latex_options="HOLD_position") %>%
+    row_spec(0, bold=TRUE)%>%
+  row_spec(a, bold=TRUE)%>%
+  footnote(general = c("Due to rounding, not all values will add up exactly."), general_title = "")
+
+tim18
+
+ rm(tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7, tmp8, tmp9, tmp10, tmp11, tmp12, tmp13, tmp14, tmp15, a)
+```
+
+
+
+## Table 19: All live trees across previous and current measurement periods, `r city_name`, `r report_year`
+ 
+ 
+ 
+ 
+```{r, Table 19: Tree count by species between T1 and T2, echo=FALSE, warning=FALSE, message=FALSE, error=FALSE}
+ 
+
+#---#---#---#---#---#---#---#---#---#---
+# T1 
+# Species sums and standard errors
+tmp1 <- filter(FIATree_prev, STATUSCD ==1) %>% group_by(GENUS, SPECIES, COMMON_NAME, STRATUM_LABEL, STRATUM_CN, PLT_CN) %>%
+          summarize(TRE_ADJ = sum(TREE_ADJ),
+                    .groups = 'drop') %>%
+          group_by(GENUS, SPECIES, COMMON_NAME, STRATUM_LABEL, STRATUM_CN) %>%
+          summarize(tot_s = sum(TRE_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+                    tot_s2 = sum(TRE_ADJ^2), # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)
+                    .groups = 'drop')
+  
+tmp2 <-  right_join(select(Stratum_prev, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_CN, STRATUM_PLOT_COUNT, STRATUM_WEIGHT), tmp1, by = "STRATUM_CN") %>% # join to POP_STATUM values
+mutate(var_tot = ((tot_s2 - STRATUM_PLOT_COUNT * ((tot_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))), # v(P_hd) eq 4.4
+       TOT_pop = ESTN_UNIT_ACRES * STRATUM_WEIGHT * tot_s/ STRATUM_PLOT_COUNT,
+       TOT_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_tot) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_tot)) # calculate species - stratum variance
+
+tmp3 <- tmp2 %>% group_by(GENUS, SPECIES, COMMON_NAME) %>% 
+                  summarize(T1_TOT_POP = sum(TOT_pop, na.rm = T),
+                  T1_TOT_VAR = sum(TOT_var, na.rm = T),
+                  .groups = 'drop'
+                    ) %>% 
+                  mutate(T1_TOT_STND_ERR = sqrt(T1_TOT_VAR)) # species SE
+
+
+#---#---#---#---#---#---#---#---#---#---
+# T2 
+# Species sums and standard errors
+tmp4 <- filter(FIATree, STATUSCD ==1) %>% group_by(GENUS, SPECIES, COMMON_NAME, STRATUM_LABEL, STRATUM_CN, PLT_CN) %>%
+          summarize(TRE_ADJ = sum(TREE_ADJ),
+                    .groups = 'drop') %>%
+          group_by(GENUS, SPECIES, COMMON_NAME, STRATUM_LABEL, STRATUM_CN) %>%
+          summarize(tot_s = sum(TRE_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+                    tot_s2 = sum(TRE_ADJ^2), # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)
+                    .groups = 'drop')
+  
+tmp5 <-  right_join(select(Stratum, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_CN, STRATUM_PLOT_COUNT, STRATUM_WEIGHT), tmp4, by = "STRATUM_CN") %>% # join to POP_STATUM values
+mutate(var_tot = ((tot_s2 - STRATUM_PLOT_COUNT * ((tot_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))), # v(P_hd) eq 4.4
+       TOT_pop = ESTN_UNIT_ACRES * STRATUM_WEIGHT * tot_s/ STRATUM_PLOT_COUNT,
+       TOT_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_tot) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_tot)) # calculate species - stratum variance
+
+tmp6 <- tmp5 %>% group_by(GENUS, SPECIES, COMMON_NAME) %>% 
+                  summarize(T2_TOT_POP = sum(TOT_pop, na.rm = T),
+                  T2_TOT_VAR = sum(TOT_var, na.rm = T),
+                  .groups = 'drop'
+                    ) %>% 
+                  mutate(T2_TOT_STND_ERR = sqrt(T2_TOT_VAR)) # species SE
+
+#---#---#---#---#---#---#---#---#---#---
+
+tmp7 <- full_join(tmp3[-5], tmp6[-5], by = c("GENUS", "SPECIES", "COMMON_NAME")) %>%
+        arrange(GENUS, SPECIES, COMMON_NAME)
+tmp7 <- tmp7 %>% mutate(PCT_CHG = ((T2_TOT_POP - T1_TOT_POP)/T1_TOT_POP)*100)
+
+
+tmp7$T1_TOT_POP<-format(round(tmp7$T1_TOT_POP, digits=0), big.mark=",")
+tmp7$T1_TOT_STND_ERR<-format(round(tmp7$T1_TOT_STND_ERR, digits=0), big.mark=",")
+tmp7$T2_TOT_POP<-format(round(tmp7$T2_TOT_POP, digits=0), big.mark=",")
+tmp7$T2_TOT_STND_ERR<-format(round(tmp7$T2_TOT_STND_ERR, digits=0), big.mark=",")
+
+options(knitr.kable.NA = '--')
+
+tim19<-kable(tmp7, format = "html",
+       booktabs = TRUE,
+       longtable = T,
+       digits=c(0,0,0,0,0,0,0,1),
+ # caption= tab.19_cap,
+       col.names = (c("Genus", "Species", "Common name", "Total trees in 2018 (number)", "Standard error in 2018 (number)", "Total trees in 2019 (number)", "Standard error in 2019 (number)", "Percent change")),
+       align=(c("l","l","l","r", "r", "r", "r", "r")),
+      format.args = list(big.mark = ','),  linesep="") %>%
+      column_spec(c(1,2), width = "7em", italic=TRUE) %>%
+    kable_styling(latex_options=c("HOLD_POSITION"))%>%
+    row_spec(0, bold=TRUE)%>%
+    footnote(general="Due to rounding, not all values will add up exactly.", general_title="")
+
+tim19
+
+rm(tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7)
+```
+
+## Table 20: Live trees by FIA land use classes across previous and current measurement periods, `r city_name`, `r report_year`
+
+```{r, Table 20: Tree count by FIA Landuse between T1 and T2, echo=FALSE, warning=FALSE, message=FALSE, error=FALSE}
+
+FIATree_prev <- FIATree_prev %>% mutate(LAND_USE_10 = revalue(LAND_USE, c("Forest Land" = "Forest land", "Cropland" = "Agriculture", "Pasture" = "Agriculture", "IdleFarmland" = "Agriculture", "Orchard" = "Agriculture", "ChristmasPlantation" = "Agriculture", "WildlifeOpening" = "Agriculture", "Windbreak" = "Agriculture", "NonforestChaparral" = "Rangeland/Chaparral", "Rangeland" = "Rangeland/Chaparral", "Commercial" = "Commercial/Industrial", "Cultural" = "Commercial/Industrial",  "Developed" = "Commercial/Industrial", "Institutional" = "Commercial/Industrial", "MiningWasteland" = "Commercial/Industrial", "Multi-family" = "Multi-family residential", "Recreation" = "Recreation/Cemetery", "Cemetery" = "Recreation/Cemetery", "Park" = "Recreation/Cemetery", "GolfCourse" = "Recreation/Cemetery", "Transportation" = "Rights-of-way", "Utility" = "Rights-of-way", "Other" = "Natural lands", "Nonvegetated" = "Natural lands", "Wetland" = "Natural lands", "Beach" = "Natural lands")))
+
+# Order the landuse levels
+FIATree_prev$LAND_USE_10 <- ordered(FIATree_prev$LAND_USE_10, levels = c("Forest land", "Agriculture", "Rangeland/Chaparral", "Commercial/Industrial", "Multi-family residential", "Residential", "Recreation/Cemetery", "Rights-of-way", "Natural lands", "Water"))
+
+#---#---#---#---#---#---#---#---#---#---
+#---#---#---#---#---#---#---#---#---#---
+# Previous year
+#---#---#---#---#---#---#---#---#---#---
+#---#---#---#---#---#---#---#---#---#---
+# FIA Landuse sums and standard errors
+tmp1 <- filter(FIATree_prev, STATUSCD ==1) %>% group_by(LAND_USE_10, STRATUM_LABEL, STRATUM_CN, PLT_CN) %>%
+          summarize(TRE_ADJ = sum(TREE_ADJ),
+                    .groups = 'drop') %>%
+          group_by(LAND_USE_10, STRATUM_LABEL, STRATUM_CN) %>%
+          summarize(tot_s = sum(TRE_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+                    tot_s2 = sum(TRE_ADJ^2), # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)
+                    .groups = 'drop')
+  
+tmp2 <-  right_join(select(Stratum_prev, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_CN, STRATUM_PLOT_COUNT, STRATUM_WEIGHT), tmp1, by = "STRATUM_CN") %>% # join to POP_STATUM values
+mutate(var_tot = ((tot_s2 - STRATUM_PLOT_COUNT * ((tot_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))), # v(P_hd) eq 4.4
+       TOT_pop = ESTN_UNIT_ACRES * STRATUM_WEIGHT * tot_s/ STRATUM_PLOT_COUNT,
+       TOT_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_tot) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_tot)) # calculate species - stratum variance
+
+tmp3 <- tmp2 %>% group_by(LAND_USE_10) %>% 
+                  summarize(T1_TOT_POP = sum(TOT_pop, na.rm = T),
+                  T1_TOT_VAR = sum(TOT_var, na.rm = T),
+                  .groups = 'drop'
+                    ) %>% 
+                  mutate(T1_TOT_STND_ERR = sqrt(T1_TOT_VAR)) # LU SE
+
+#---#---#---#---#---#---#---#---#---#---
+# Total sums and standard errors for total row
+
+tmp4 <- filter(FIATree_prev, STATUSCD ==1) %>% group_by(STRATUM_LABEL, STRATUM_CN, PLT_CN) %>%
+          summarize(TRE_ADJ = sum(TREE_ADJ),
+                    .groups = 'drop') %>%
+          group_by(STRATUM_LABEL, STRATUM_CN) %>%
+          summarize(tot_s = sum(TRE_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+                    tot_s2 = sum(TRE_ADJ^2), # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)
+                    .groups = 'drop')
+
+tmp5 <-  right_join(select(Stratum_prev, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_CN, STRATUM_PLOT_COUNT, STRATUM_WEIGHT), tmp4, by = "STRATUM_CN") %>% # join to POP_STATUM values
+mutate(var_tot = ((tot_s2 - STRATUM_PLOT_COUNT * ((tot_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))), # v(P_hd) eq 4.4
+       TOT_pop = ESTN_UNIT_ACRES * STRATUM_WEIGHT * tot_s/ STRATUM_PLOT_COUNT,
+       TOT_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_tot) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_tot)) # calculate species - stratum variance
+
+tmp6 <- tmp5 %>% group_by (EVALID) %>% summarize(T1_TOT_POP = sum(TOT_pop, na.rm = T),
+                  T1_TOT_VAR = sum(TOT_var, na.rm = T),
+                  .groups = 'drop'
+                    ) %>% 
+                  mutate(T1_TOT_STND_ERR = sqrt(T1_TOT_VAR),
+                         LAND_USE_10 = "Total")
+
+
+#---#---#---#---#---#---#---#---#---#---
+#---#---#---#---#---#---#---#---#---#---
+# T2 
+#---#---#---#---#---#---#---#---#---#---
+#---#---#---#---#---#---#---#---#---#---
+# Species sums and standard errors
+tmp7 <- filter(FIATree, STATUSCD ==1) %>% group_by(LAND_USE_10, STRATUM_LABEL, STRATUM_CN, PLT_CN) %>%
+          summarize(TRE_ADJ = sum(TREE_ADJ),
+                    .groups = 'drop') %>%
+          group_by(LAND_USE_10, STRATUM_LABEL, STRATUM_CN) %>%
+          summarize(tot_s = sum(TRE_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+                    tot_s2 = sum(TRE_ADJ^2), # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)
+                    .groups = 'drop')
+  
+tmp8 <-  right_join(select(Stratum, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_CN, STRATUM_PLOT_COUNT, STRATUM_WEIGHT), tmp7, by = "STRATUM_CN") %>% # join to POP_STATUM values
+mutate(var_tot = ((tot_s2 - STRATUM_PLOT_COUNT * ((tot_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))), # v(P_hd) eq 4.4
+       TOT_pop = ESTN_UNIT_ACRES * STRATUM_WEIGHT * tot_s/ STRATUM_PLOT_COUNT,
+       TOT_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_tot) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_tot)) # calculate species - stratum variance
+
+tmp9 <- tmp8 %>% group_by(LAND_USE_10) %>% 
+                  summarize(T2_TOT_POP = sum(TOT_pop, na.rm = T),
+                  T2_TOT_VAR = sum(TOT_var, na.rm = T),
+                  .groups = 'drop'
+                    ) %>% 
+                  mutate(T2_TOT_STND_ERR = sqrt(T2_TOT_VAR)) # species SE
+
+#---#---#---#---#---#---#---#---#---#---
+# Total sums and standard errors for total row
+
+tmp10 <- filter(FIATree, STATUSCD ==1) %>% group_by(STRATUM_LABEL, STRATUM_CN, PLT_CN) %>%
+          summarize(TRE_ADJ = sum(TREE_ADJ),
+                    .groups = 'drop') %>%
+          group_by(STRATUM_LABEL, STRATUM_CN) %>%
+          summarize(tot_s = sum(TRE_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+                    tot_s2 = sum(TRE_ADJ^2), # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)
+                    .groups = 'drop')
+
+tmp11 <-  right_join(select(Stratum, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_CN, STRATUM_PLOT_COUNT, STRATUM_WEIGHT), tmp10, by = "STRATUM_CN") %>% # join to POP_STATUM values
+mutate(var_tot = ((tot_s2 - STRATUM_PLOT_COUNT * ((tot_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))), # v(P_hd) eq 4.4
+       TOT_pop = ESTN_UNIT_ACRES * STRATUM_WEIGHT * tot_s/ STRATUM_PLOT_COUNT,
+       TOT_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_tot) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_tot)) # calculate species - stratum variance
+
+tmp12 <- tmp11 %>% group_by (EVALID) %>% summarize(T2_TOT_POP = sum(TOT_pop, na.rm = T),
+                  T2_TOT_VAR = sum(TOT_var, na.rm = T),
+                  .groups = 'drop'
+                    ) %>% 
+                  mutate(T2_TOT_STND_ERR = sqrt(T2_TOT_VAR),
+                         LAND_USE_10 = "Total")
+
+
+#---#---#---#---#---#---#---#---#---#---
+# joining T1 and T2 data frames
+tmp13 <- full_join(tmp3[-3], tmp9[-3], by = c("LAND_USE_10")) %>% arrange(LAND_USE_10)
+
+#---#---#---#---#---#---#---#---#---#---
+# Adding total rows to dataframe
+
+tot_row <- join(tmp6[c(5,2,4)], tmp12[c(5,2,4)], by = "LAND_USE_10")
+
+tmp14 <- rbind(tmp13, tot_row)
+
+#---#---#---#---#---#---#---#---#---#---
+# Percent change between T2 and T1
+
+tmp14 <- tmp14 %>% mutate(PCT_CHG = ((T2_TOT_POP - T1_TOT_POP)/T1_TOT_POP)*100)
+
+a <- nrow(tmp14)
+
+options(knitr.kable.NA = '--')
+
+tim20<-kable(tmp14, format = "html",
+       booktabs = TRUE,
+       longtable = T,
+       digits=c(0,0,0,0,0,1),
+# caption= tab.20_cap,
+       col.names = (c("FIA land use", "Total trees in 2018 (number)", "Standard error in 2018 (number)", "Total trees in 2019 (number)", "Standard error in 2019 (number)", "Percent change")),
+       align=(c("l", "r", "r", "r", "r", "r")),
+      format.args = list(big.mark = ','),
+       linesep="") %>%
+    kable_styling(latex_options=c("HOLD_POSITION"))%>%
+    row_spec(a, bold = TRUE) %>%
+    footnote(general="Due to rounding, not all values will add up exactly.", general_title="", threeparttable=TRUE)
+
+tim20
+
+
+rm(tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7, tmp8, tmp9, tmp10, tmp11, tmp12, tmp13, tot_row, tmp14, a )
+```
+
+## Table 21: Live trees by owner group across previous and current measurement periods, `r city_name`, `r report_year`
+
+```{r, Table 21: Tree count by Ownership between T1 and T2, echo=FALSE, warning=FALSE, message=FALSE, error=FALSE}
+
+
+# T1 
+#---#---#---#---#---#---#---#---#---#---
+#---#---#---#---#---#---#---#---#---#---
+# FIA Landuse sums and standard errors
+tmp1 <- filter(FIATree_prev, STATUSCD ==1) %>% group_by(OWNER_GROUP, STRATUM_LABEL, STRATUM_CN, PLT_CN) %>%
+          summarize(TRE_ADJ = sum(TREE_ADJ),
+                    .groups = 'drop') %>%
+          group_by(OWNER_GROUP, STRATUM_LABEL, STRATUM_CN) %>%
+          summarize(tot_s = sum(TRE_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+                    tot_s2 = sum(TRE_ADJ^2), # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)
+                    .groups = 'drop')
+  
+tmp2 <-  right_join(select(Stratum_prev, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_CN, STRATUM_PLOT_COUNT, STRATUM_WEIGHT), tmp1, by = "STRATUM_CN") %>% # join to POP_STATUM values
+mutate(var_tot = ((tot_s2 - STRATUM_PLOT_COUNT * ((tot_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))), # v(P_hd) eq 4.4
+       TOT_pop = ESTN_UNIT_ACRES * STRATUM_WEIGHT * tot_s/ STRATUM_PLOT_COUNT,
+       TOT_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_tot) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_tot)) # calculate species - stratum variance
+
+tmp3 <- tmp2 %>% group_by(OWNER_GROUP) %>% 
+                  summarize(T1_TOT_POP = sum(TOT_pop, na.rm = T),
+                  T1_TOT_VAR = sum(TOT_var, na.rm = T),
+                  .groups = 'drop'
+                    ) %>% 
+                  mutate(T1_TOT_STND_ERR = sqrt(T1_TOT_VAR)) # LU SE
+
+#---#---#---#---#---#---#---#---#---#---
+# Total sums and standard errors for total row
+
+tmp4 <- filter(FIATree_prev, STATUSCD ==1) %>% group_by(STRATUM_LABEL, STRATUM_CN, PLT_CN) %>%
+          summarize(TRE_ADJ = sum(TREE_ADJ),
+                    .groups = 'drop') %>%
+          group_by(STRATUM_LABEL, STRATUM_CN) %>%
+          summarize(tot_s = sum(TRE_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+                    tot_s2 = sum(TRE_ADJ^2), # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)
+                    .groups = 'drop')
+
+tmp5 <-  right_join(select(Stratum_prev, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_CN, STRATUM_PLOT_COUNT, STRATUM_WEIGHT), tmp4, by = "STRATUM_CN") %>% # join to POP_STATUM values
+mutate(var_tot = ((tot_s2 - STRATUM_PLOT_COUNT * ((tot_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))), # v(P_hd) eq 4.4
+       TOT_pop = ESTN_UNIT_ACRES * STRATUM_WEIGHT * tot_s/ STRATUM_PLOT_COUNT,
+       TOT_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_tot) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_tot)) # calculate species - stratum variance
+
+tmp6 <- tmp5 %>% group_by (EVALID) %>% summarize(T1_TOT_POP = sum(TOT_pop, na.rm = T),
+                  T1_TOT_VAR = sum(TOT_var, na.rm = T),
+                  .groups = 'drop'
+                    ) %>% 
+                  mutate(T1_TOT_STND_ERR = sqrt(T1_TOT_VAR),
+                         OWNER_GROUP = "Total")
+
+
+#---#---#---#---#---#---#---#---#---#---
+#---#---#---#---#---#---#---#---#---#---
+# T2 
+#---#---#---#---#---#---#---#---#---#---
+#---#---#---#---#---#---#---#---#---#---
+# Species sums and standard errors
+tmp7 <- filter(FIATree, STATUSCD ==1) %>% group_by(OWNER_GROUP, STRATUM_LABEL, STRATUM_CN, PLT_CN) %>%
+          summarize(TRE_ADJ = sum(TREE_ADJ),
+                    .groups = 'drop') %>%
+          group_by(OWNER_GROUP, STRATUM_LABEL, STRATUM_CN) %>%
+          summarize(tot_s = sum(TRE_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+                    tot_s2 = sum(TRE_ADJ^2), # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)
+                    .groups = 'drop')
+  
+tmp8 <-  right_join(select(Stratum, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_CN, STRATUM_PLOT_COUNT, STRATUM_WEIGHT), tmp7, by = "STRATUM_CN") %>% # join to POP_STATUM values
+mutate(var_tot = ((tot_s2 - STRATUM_PLOT_COUNT * ((tot_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))), # v(P_hd) eq 4.4
+       TOT_pop = ESTN_UNIT_ACRES * STRATUM_WEIGHT * tot_s/ STRATUM_PLOT_COUNT,
+       TOT_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_tot) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_tot)) # calculate species - stratum variance
+
+tmp9 <- tmp8 %>% group_by(OWNER_GROUP) %>% 
+                  summarize(T2_TOT_POP = sum(TOT_pop, na.rm = T),
+                  T2_TOT_VAR = sum(TOT_var, na.rm = T),
+                  .groups = 'drop'
+                    ) %>% 
+                  mutate(T2_TOT_STND_ERR = sqrt(T2_TOT_VAR)) # species SE
+
+#---#---#---#---#---#---#---#---#---#---
+# Total sums and standard errors for total row
+
+tmp10 <- filter(FIATree, STATUSCD ==1) %>% group_by(STRATUM_LABEL, STRATUM_CN, PLT_CN) %>%
+          summarize(TRE_ADJ = sum(TREE_ADJ),
+                    .groups = 'drop') %>%
+          group_by(STRATUM_LABEL, STRATUM_CN) %>%
+          summarize(tot_s = sum(TRE_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+                    tot_s2 = sum(TRE_ADJ^2), # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)
+                    .groups = 'drop')
+
+tmp11 <-  right_join(select(Stratum, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_CN, STRATUM_PLOT_COUNT, STRATUM_WEIGHT), tmp10, by = "STRATUM_CN") %>% # join to POP_STATUM values
+mutate(var_tot = ((tot_s2 - STRATUM_PLOT_COUNT * ((tot_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))), # v(P_hd) eq 4.4
+       TOT_pop = ESTN_UNIT_ACRES * STRATUM_WEIGHT * tot_s/ STRATUM_PLOT_COUNT,
+       TOT_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_tot) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_tot)) # calculate species - stratum variance
+
+tmp12 <- tmp11 %>% group_by (EVALID) %>% summarize(T2_TOT_POP = sum(TOT_pop, na.rm = T),
+                  T2_TOT_VAR = sum(TOT_var, na.rm = T),
+                  .groups = 'drop'
+                    ) %>% 
+                  mutate(T2_TOT_STND_ERR = sqrt(T2_TOT_VAR),
+                         OWNER_GROUP = "Total")
+
+
+#---#---#---#---#---#---#---#---#---#---
+# joining T1 and T2 data frames
+tmp13 <- full_join(tmp3[-3], tmp9[-3], by = c("OWNER_GROUP")) %>% arrange(OWNER_GROUP)
+
+#---#---#---#---#---#---#---#---#---#---
+# Adding total rows to dataframe
+
+tot_row <- join(tmp6[c(5,2,4)], tmp12[c(5,2,4)], by = "OWNER_GROUP")
+
+tmp14 <- rbind(tmp13, tot_row)
+
+#---#---#---#---#---#---#---#---#---#---
+# Percent change between T2 and T1
+
+tmp14 <- tmp14 %>% mutate(PCT_CHG = ((T2_TOT_POP - T1_TOT_POP)/T1_TOT_POP)*100)
+
+
+
+
+options(knitr.kable.NA = '--')
+
+tim21<-kable(tmp14, format = "html",
+       booktabs = TRUE,
+       longtable = T,
+       digits=c(0,0,0,0,0,1),
+  # caption= tab.21_cap ,
+       col.names = (c("Owner group", "Total trees in 2018 (number)", "Standard error in 2018 (number)", "Total trees in 2019 (number)", "Standard error in 2019 (number)", "Percent change")),
+       align=(c("l", "r", "r", "r", "r", "r")),
+      format.args = list(big.mark = ','),
+       linesep="") %>%
+    kable_styling(latex_options=c("HOLD_POSITION"))%>%
+    row_spec(0, bold=TRUE) %>%
+    row_spec(nrow(tmp14), bold = TRUE) %>%
+    footnote(general="Due to rounding, not all values will add up exactly.", general_title="", threeparttable=TRUE)
+
+tim21
+
+rm(tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7, tmp8, tmp9, tmp10, tmp11, tmp12, tmp13, tmp14)
+```
+
+## Table 22: Number of trees classified as standing dead by FIA land use classes across previous and current measurement periods, `r city_name`, `r report_year`
+
+```{r, Table 22: Standing dead trees across T1 and T2, echo=FALSE, warning=FALSE, message=FALSE, error=FALSE}
+
+#---#---#---#---#---#---#---#---#---#---
+#---#---#---#---#---#---#---#---#---#---
+# T1 
+#---#---#---#---#---#---#---#---#---#---
+#---#---#---#---#---#---#---#---#---#---
+#Dead trees - filter out dead and down trees (STANDING_DEAD_CD = 0)
+
+tmp1 <- filter(FIATree_prev, STATUSCD == 2 & (STANDING_DEAD_CD == 1 | is.na(STANDING_DEAD_CD))) %>% 
+          group_by(LAND_USE_10, STRATUM_LABEL, STRATUM_CN, PLT_CN) %>%
+          summarize(TRE_ADJ = sum(TREE_ADJ), #sum to plot - sample unit
+                    .groups = 'drop')  %>% 
+          group_by(LAND_USE_10, STRATUM_LABEL, STRATUM_CN) %>%
+          summarize(tre_s = sum(TRE_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+                    tre_s2 = sum(TRE_ADJ^2), # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)) 
+                    .groups = 'drop')
+
+tmp2 <-  right_join(select(Stratum_prev, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_CN, STRATUM_PLOT_COUNT, STRATUM_WEIGHT), tmp1, by = "STRATUM_CN") %>% # join to POP_STATUM values
+mutate(var_tre = ((tre_s2 - STRATUM_PLOT_COUNT * ((tre_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))),
+       TRE_pop =  ESTN_UNIT_ACRES * STRATUM_WEIGHT * tre_s/ STRATUM_PLOT_COUNT,
+       TRE_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_tre) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_tre)) # calculate stratum-damage variance
+
+tmp3 <- tmp2 %>% group_by(LAND_USE_10) %>% 
+                  summarize(T1_TRE_POP = sum(TRE_pop, na.rm = T),
+                  T1_TRE_VAR = sum(TRE_var, na.rm = T),
+                  .groups = 'drop') %>%
+                mutate(T1_TRE_STND_ERR = sqrt(T1_TRE_VAR)) 
+
+
+#---#---#---#---#---#---#---#---#---#---
+# Total dead for total row - filter out dead and down trees
+
+tmp4 <- filter(FIATree_prev, STATUSCD ==2 & (STANDING_DEAD_CD == 1 | is.na(STANDING_DEAD_CD))) %>% 
+  group_by(STRATUM_LABEL, STRATUM_CN, PLT_CN) %>%
+          summarize(TRE_ADJ = sum(TREE_ADJ), #sum to plot - sample unit
+                    .groups = 'drop')  %>% 
+          group_by(STRATUM_LABEL, STRATUM_CN) %>%
+          summarize(tre_s = sum(TRE_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+                    tre_s2 = sum(TRE_ADJ^2), # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)) 
+                    .groups = 'drop')
+
+tmp5 <-  right_join(select(Stratum_prev, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_CN, STRATUM_PLOT_COUNT, STRATUM_WEIGHT), tmp4, by = "STRATUM_CN") %>% # join to POP_STATUM values
+mutate(var_tre = ((tre_s2 - STRATUM_PLOT_COUNT * ((tre_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))),
+       TRE_pop =  ESTN_UNIT_ACRES * STRATUM_WEIGHT * tre_s/ STRATUM_PLOT_COUNT,
+       TRE_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_tre) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_tre)) # calculate stratum-damage variance
+
+tmp6 <- tmp5 %>% group_by(EVALID) %>% 
+                  summarize(T1_TRE_POP = sum(TRE_pop, na.rm = T),
+                  T1_TRE_VAR = sum(TRE_var, na.rm = T),
+                  .groups = 'drop') %>%
+                mutate(T1_TRE_STND_ERR = sqrt(T1_TRE_VAR),
+                       LAND_USE_10 = 'Total')
+
+#---#---#---#---#---#---#---#---#---#---
+#---#---#---#---#---#---#---#---#---#---
+# T2
+#---#---#---#---#---#---#---#---#---#---
+#---#---#---#---#---#---#---#---#---#---
+#Dead trees - filter out dead and down trees (STANDING_DEAD_CD = 0)
+
+tmp7 <- filter(FIATree, STATUSCD == 2 & (STANDING_DEAD_CD == 1 | is.na(STANDING_DEAD_CD))) %>% 
+          group_by(LAND_USE_10, STRATUM_LABEL, STRATUM_CN, PLT_CN) %>%
+          summarize(TRE_ADJ = sum(TREE_ADJ), #sum to plot - sample unit
+                    .groups = 'drop')  %>% 
+          group_by(LAND_USE_10, STRATUM_LABEL, STRATUM_CN) %>%
+          summarize(tre_s = sum(TRE_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+                    tre_s2 = sum(TRE_ADJ^2), # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)) 
+                    .groups = 'drop')
+
+tmp8 <-  right_join(select(Stratum, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_CN, STRATUM_PLOT_COUNT, STRATUM_WEIGHT), tmp7, by = "STRATUM_CN") %>% # join to POP_STATUM values
+mutate(var_tre = ((tre_s2 - STRATUM_PLOT_COUNT * ((tre_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))),
+       TRE_pop =  ESTN_UNIT_ACRES * STRATUM_WEIGHT * tre_s/ STRATUM_PLOT_COUNT,
+       TRE_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_tre) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_tre)) # calculate stratum-damage variance
+
+tmp9 <- tmp8 %>% group_by(LAND_USE_10) %>% 
+                  summarize(T2_TRE_POP = sum(TRE_pop, na.rm = T),
+                  T2_TRE_VAR = sum(TRE_var, na.rm = T),
+                  .groups = 'drop') %>%
+                mutate(T2_TRE_STND_ERR = sqrt(T2_TRE_VAR)) 
+
+
+#---#---#---#---#---#---#---#---#---#---
+# Total dead for total row - filter out dead and down trees
+
+tmp10 <- filter(FIATree, STATUSCD ==2 & (STANDING_DEAD_CD == 1 | is.na(STANDING_DEAD_CD))) %>% 
+  group_by(STRATUM_LABEL, STRATUM_CN, PLT_CN) %>%
+          summarize(TRE_ADJ = sum(TREE_ADJ), #sum to plot - sample unit
+                    .groups = 'drop')  %>% 
+          group_by(STRATUM_LABEL, STRATUM_CN) %>%
+          summarize(tre_s = sum(TRE_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+                    tre_s2 = sum(TRE_ADJ^2), # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)) 
+                    .groups = 'drop')
+
+tmp11 <-  right_join(select(Stratum, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_CN, STRATUM_PLOT_COUNT, STRATUM_WEIGHT), tmp10, by = "STRATUM_CN") %>% # join to POP_STATUM values
+mutate(var_tre = ((tre_s2 - STRATUM_PLOT_COUNT * ((tre_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))),
+       TRE_pop =  ESTN_UNIT_ACRES * STRATUM_WEIGHT * tre_s/ STRATUM_PLOT_COUNT,
+       TRE_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_tre) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_tre)) # calculate stratum-damage variance
+
+tmp12 <- tmp11 %>% group_by(EVALID) %>% 
+                  summarize(T2_TRE_POP = sum(TRE_pop, na.rm = T),
+                  T2_TRE_VAR = sum(TRE_var, na.rm = T),
+                  .groups = 'drop') %>%
+                mutate(T2_TRE_STND_ERR = sqrt(T2_TRE_VAR),
+                       LAND_USE_10 = 'Total')
+
+
+#---#---#---#---#---#---#---#---#---#---
+# joining T1 and T2 data frames
+tmp13 <- full_join(tmp3[-3], tmp9[-3], by = c("LAND_USE_10")) %>% arrange(LAND_USE_10)
+
+#---#---#---#---#---#---#---#---#---#---
+# Adding total rows to dataframe
+
+tot_row <- join(tmp6[c(5,2,4)], tmp12[c(5,2,4)], by = "LAND_USE_10")
+
+tmp14 <- rbind(tmp13, tot_row)
+
+#---#---#---#---#---#---#---#---#---#---
+# Percent change between T2 and T1
+
+tmp14 <- tmp14 %>% mutate(PCT_CHG = ((T2_TRE_POP - T1_TRE_POP)/T1_TRE_POP)*100)
+
+
+
+tim22<-kable(tmp14, format = "html",
+       booktabs = TRUE,
+       longtable = T,
+       digits=c(0,0,0,0,0,1),
+     #  caption= tab.22_cap,
+       col.names = (c("Land use", "Total trees", "Standard error", "Total trees", "Standard error", "% Change")),
+       align=(c("l", "r", "r", "r", "r", "r")),
+      format.args = list(big.mark = ','),
+       linesep="") %>%
+     kable_styling(latex_options=c("HOLD_POSITION"))%>%
+    row_spec(0, bold=TRUE) %>%
+    row_spec(nrow(tmp14), bold = TRUE) %>%
+    footnote(general="Due to rounding, not all values will add up exactly.", general_title="", threeparttable=TRUE)
+  
+rm(tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7, tmp8, tmp9, tmp10, tmp11, tmp12, tmp13, tmp14)  
+
+tim22
+
+```
+
+## Table 23: Aboveground biomass in live and standing dead trees by FIA land use classes across previous and current measurement periods, `r city_name`, `r report_year`
+
+```{r, Table 23: Aboveground biomass in live and standing dead trees by FIA Landuse between T1 and T2, echo=FALSE, warning=FALSE, message=FALSE, error=FALSE}
+
+#---#---#---#---#---#---#---#---#---#---
+#---#---#---#---#---#---#---#---#---#---
+# T1 
+#---#---#---#---#---#---#---#---#---#---
+#---#---#---#---#---#---#---#---#---#---
+# FIA Landuse sums and standard errors
+tmp1 <-   filter(FIATree_prev, STATUSCD ==1 | STATUSCD == 2) %>%       #live and dead trees
+          group_by(LAND_USE_10, STRATUM_LABEL, STRATUM_CN, PLT_CN) %>%
+          summarize(TRE_ADJ = sum(AG_BIOMASS_LBS_ADJ/2000, na.rm = T), #convert to tons
+                    .groups = 'drop') %>%
+          group_by(LAND_USE_10, STRATUM_LABEL, STRATUM_CN) %>%
+          summarize(tot_s = sum(TRE_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+                    tot_s2 = sum(TRE_ADJ^2), # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)
+                    .groups = 'drop')
+  
+tmp2 <-  right_join(select(Stratum_prev, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_CN, STRATUM_PLOT_COUNT, STRATUM_WEIGHT), tmp1, by = "STRATUM_CN") %>% # join to POP_STATUM values
+mutate(var_tot = ((tot_s2 - STRATUM_PLOT_COUNT * ((tot_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))), # v(P_hd) eq 4.4
+       TOT_pop = ESTN_UNIT_ACRES * STRATUM_WEIGHT * tot_s/ STRATUM_PLOT_COUNT,
+       TOT_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_tot) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_tot)) # calculate species - stratum variance
+
+tmp3 <- tmp2 %>% group_by(LAND_USE_10) %>% 
+                  summarize(T1_TOT_POP = sum(TOT_pop, na.rm = T),
+                  T1_TOT_VAR = sum(TOT_var, na.rm = T),
+                  .groups = 'drop'
+                    ) %>% 
+                  mutate(T1_TOT_STND_ERR = sqrt(T1_TOT_VAR)) # LU SE
+
+#---#---#---#---#---#---#---#---#---#---
+# Total sums and standard errors for total row
+
+tmp4 <-  filter(FIATree_prev, STATUSCD ==1 | STATUSCD == 2) %>%       #live and dead trees
+          group_by(STRATUM_LABEL, STRATUM_CN, PLT_CN) %>%
+          summarize(TRE_ADJ = sum(AG_BIOMASS_LBS_ADJ/2000, na.rm = T), #convert to tons
+                    .groups = 'drop') %>%
+          group_by(STRATUM_LABEL, STRATUM_CN) %>%
+          summarize(tot_s = sum(TRE_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+                    tot_s2 = sum(TRE_ADJ^2), # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)
+                    .groups = 'drop')
+
+tmp5 <-  right_join(select(Stratum_prev, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_CN, STRATUM_PLOT_COUNT, STRATUM_WEIGHT), tmp4, by = "STRATUM_CN") %>% # join to POP_STATUM values
+mutate(var_tot = ((tot_s2 - STRATUM_PLOT_COUNT * ((tot_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))), # v(P_hd) eq 4.4
+       TOT_pop = ESTN_UNIT_ACRES * STRATUM_WEIGHT * tot_s/ STRATUM_PLOT_COUNT,
+       TOT_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_tot) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_tot)) # calculate species - stratum variance
+
+tmp6 <- tmp5 %>% group_by (EVALID) %>% summarize(T1_TOT_POP = sum(TOT_pop, na.rm = T),
+                  T1_TOT_VAR = sum(TOT_var, na.rm = T),
+                  .groups = 'drop'
+                    ) %>% 
+                  mutate(T1_TOT_STND_ERR = sqrt(T1_TOT_VAR),
+                         LAND_USE_10 = "Total")
+
+
+#---#---#---#---#---#---#---#---#---#---
+#---#---#---#---#---#---#---#---#---#---
+# T2 
+#---#---#---#---#---#---#---#---#---#---
+#---#---#---#---#---#---#---#---#---#---
+# Species sums and standard errors
+tmp7 <-   filter(FIATree, STATUSCD ==1 | STATUSCD == 2) %>%       #live and dead trees
+          group_by(LAND_USE_10, STRATUM_LABEL, STRATUM_CN, PLT_CN) %>%
+          summarize(TRE_ADJ = sum(AG_BIOMASS_LBS_ADJ/2000, na.rm = T), #convert to tons
+                    .groups = 'drop') %>%
+          group_by(LAND_USE_10, STRATUM_LABEL, STRATUM_CN) %>%
+          summarize(tot_s = sum(TRE_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+                    tot_s2 = sum(TRE_ADJ^2), # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)
+                    .groups = 'drop')
+  
+tmp8 <-  right_join(select(Stratum, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_CN, STRATUM_PLOT_COUNT, STRATUM_WEIGHT), tmp7, by = "STRATUM_CN") %>% # join to POP_STATUM values
+mutate(var_tot = ((tot_s2 - STRATUM_PLOT_COUNT * ((tot_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))), # v(P_hd) eq 4.4
+       TOT_pop = ESTN_UNIT_ACRES * STRATUM_WEIGHT * tot_s/ STRATUM_PLOT_COUNT,
+       TOT_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_tot) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_tot)) # calculate species - stratum variance
+
+tmp9 <- tmp8 %>% group_by(LAND_USE_10) %>% 
+                  summarize(T2_TOT_POP = sum(TOT_pop, na.rm = T),
+                  T2_TOT_VAR = sum(TOT_var, na.rm = T),
+                  .groups = 'drop'
+                    ) %>% 
+                  mutate(T2_TOT_STND_ERR = sqrt(T2_TOT_VAR)) # species SE
+
+#---#---#---#---#---#---#---#---#---#---
+# Total sums and standard errors for total row
+
+tmp10 <-  filter(FIATree, STATUSCD ==1 | STATUSCD == 2) %>%       #live and dead trees
+          group_by(STRATUM_LABEL, STRATUM_CN, PLT_CN) %>%
+          summarize(TRE_ADJ = sum(AG_BIOMASS_LBS_ADJ/2000, na.rm = T), #convert to tons
+                    .groups = 'drop') %>%
+          group_by(STRATUM_LABEL, STRATUM_CN) %>%
+          summarize(tot_s = sum(TRE_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+                    tot_s2 = sum(TRE_ADJ^2), # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)
+                    .groups = 'drop')
+
+tmp11 <-  right_join(select(Stratum, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_CN, STRATUM_PLOT_COUNT, STRATUM_WEIGHT), tmp10, by = "STRATUM_CN") %>% # join to POP_STATUM values
+mutate(var_tot = ((tot_s2 - STRATUM_PLOT_COUNT * ((tot_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))), # v(P_hd) eq 4.4
+       TOT_pop = ESTN_UNIT_ACRES * STRATUM_WEIGHT * tot_s/ STRATUM_PLOT_COUNT,
+       TOT_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_tot) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_tot)) # calculate species - stratum variance
+
+tmp12 <- tmp11 %>% group_by (EVALID) %>% summarize(T2_TOT_POP = sum(TOT_pop, na.rm = T),
+                  T2_TOT_VAR = sum(TOT_var, na.rm = T),
+                  .groups = 'drop'
+                    ) %>% 
+                  mutate(T2_TOT_STND_ERR = sqrt(T2_TOT_VAR),
+                         LAND_USE_10 = "Total")
+
+#---#---#---#---#---#---#---#---#---#---
+# joining T1 and T2 data frames
+tmp13 <- full_join(tmp3[-3], tmp9[-3], by = c("LAND_USE_10")) %>% arrange(LAND_USE_10)
+
+#---#---#---#---#---#---#---#---#---#---
+# Adding total rows to dataframe
+
+tot_row <- join(tmp6[c(5,2,4)], tmp12[c(5,2,4)], by = "LAND_USE_10")
+
+tmp14 <- rbind(tmp13, tot_row)
+
+#---#---#---#---#---#---#---#---#---#---
+# Percent change between T2 and T1
+
+tmp14 <- tmp14 %>% mutate(PCT_CHG = ((T2_TOT_POP - T1_TOT_POP)/T1_TOT_POP)*100)
+
+
+
+options(knitr.kable.NA = '--')
+
+tim23<-kable(tmp14, format = "html",
+       booktabs = TRUE,
+       longtable = T,
+       digits=c(0,0,0,0,0,1),
+  # caption= tab.23_cap,
+       col.names = (c("FIA land use", "Aboveground biomass in 2018 (tons)", "Standard error (tons)", "Aboveground biomass (tons)", "Standard error (tons)", "Percent change")),
+       align=(c("l", "r", "r", "r", "r", "r")),
+      format.args = list(big.mark = ','),
+       linesep="") %>%
+    kable_styling(latex_options=c("HOLD_POSITION"))%>%
+    row_spec(0,bold = TRUE ) %>%
+    row_spec(nrow(tmp14)-1, extra_latex_after = "\\ \\cline{2-6}") %>%
+    row_spec(nrow(tmp14), bold = TRUE) %>%
+    footnote(general="Due to rounding, not all values will add up exactly.", general_title="", threeparttable=TRUE)
+
+
+tim23
+
+rm(tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7, tmp8, tmp9, tmp10, tmp11, tmp12, tmp13, tot_row, tmp14, a)
+```
+
+## Table 24: Carbon storage by species between T1 and T2
+
+```{r, Table 24: Carbon storage by species between T1 and T2, echo=FALSE, warning=FALSE, message=FALSE, error=FALSE} 
+
+#---#---#---#---#---#---#---#---#---#---
+#---#---#---#---#---#---#---#---#---#---
+# T1 
+#---#---#---#---#---#---#---#---#---#---
+#---#---#---#---#---#---#---#---#---#---
+# Species sums and standard errors
+tmp1 <-   FIATree_prev %>%  #live and dead trees
+          group_by(GENUS, SPECIES, COMMON_NAME, STRATUM_LABEL, STRATUM_CN, PLT_CN) %>%
+          summarize(STR_ADJ = sum(C_STORAGE_LBS_ADJ/2000, na.rm = T), #convert to tons
+                    .groups = 'drop') %>%
+          group_by(GENUS, SPECIES, COMMON_NAME, STRATUM_LABEL, STRATUM_CN) %>%
+          summarize(str_s = sum(STR_ADJ), 
+                    str_s2 = sum(STR_ADJ^2),
+                    .groups = 'drop') %>%
+          ungroup()
+  
+tmp2 <-  right_join(select(Stratum_prev, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_CN, STRATUM_PLOT_COUNT, STRATUM_WEIGHT), tmp1, by = "STRATUM_CN") %>% # join to POP_STRATUM values
+mutate(var_str = ((str_s2 - STRATUM_PLOT_COUNT * ((str_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))), 
+       STR_pop = ESTN_UNIT_ACRES * STRATUM_WEIGHT * str_s/ STRATUM_PLOT_COUNT,
+       STR_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_str) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_str)
+       ) # calculate species - stratum variance
+
+tmp3 <- tmp2 %>% group_by(GENUS, SPECIES, COMMON_NAME) %>% 
+                  summarize(T1_STR_POP = sum(STR_pop, na.rm = T),
+                  T1_STR_VAR = sum(STR_var, na.rm = T),
+                  .groups = 'drop'
+                    ) %>% 
+                  mutate(T1_STR_STND_ERR = sqrt(T1_STR_VAR)) # species SE
+
+
+#---#---#---#---#---#---#---#---#---#---
+# T2 
+# Species sums and standard errors
+tmp4 <-   FIATree %>%  #live and dead trees
+          group_by(GENUS, SPECIES, COMMON_NAME, STRATUM_LABEL, STRATUM_CN, PLT_CN) %>%
+          summarize(STR_ADJ = sum(C_STORAGE_LBS_ADJ/2000, na.rm = T), #convert to tons
+                    .groups = 'drop') %>%
+          group_by(GENUS, SPECIES, COMMON_NAME, STRATUM_LABEL, STRATUM_CN) %>%
+          summarize(str_s = sum(STR_ADJ), 
+                    str_s2 = sum(STR_ADJ^2),
+                    .groups = 'drop') %>%
+          ungroup()
+  
+tmp5 <-  right_join(select(Stratum, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_CN, STRATUM_PLOT_COUNT, STRATUM_WEIGHT), tmp4, by = "STRATUM_CN") %>% # join to POP_STRATUM values
+mutate(var_str = ((str_s2 - STRATUM_PLOT_COUNT * ((str_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))), 
+       STR_pop = ESTN_UNIT_ACRES * STRATUM_WEIGHT * str_s/ STRATUM_PLOT_COUNT,
+       STR_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_str) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_str)
+       ) # calculate species - stratum variance
+
+tmp6 <- tmp5 %>% group_by(GENUS, SPECIES, COMMON_NAME) %>% 
+                  summarize(T2_STR_POP = sum(STR_pop, na.rm = T),
+                  T2_STR_VAR = sum(STR_var, na.rm = T),
+                  .groups = 'drop'
+                    ) %>% 
+                  mutate(T2_STR_STND_ERR = sqrt(T2_STR_VAR)) # species SE
+
+#---#---#---#---#---#---#---#---#---#---
+
+tmp7 <- full_join(tmp3[-5], tmp6[-5], by = c("GENUS", "SPECIES", "COMMON_NAME")) %>%
+        arrange(GENUS, SPECIES, COMMON_NAME)
+tmp7 <- tmp7 %>% mutate(STR_PCT_CHG = ((T2_STR_POP - T1_STR_POP)/T1_STR_POP)*100)
+
+
+
+options(knitr.kable.NA = '--')
+
+tim24<-kable(tmp7, format = "html",
+       booktabs = TRUE,
+       longtable = T,
+       digits=c(0,0,0,0,0,0,0,1),
+  # caption= tab.24_cap,
+       col.names = (c("Genus", "Species", "Common name", "Carbon storage (tons)", "Standard error (tons)", "Carbon storage (tons)", "Standard error (tons)", "Percent change")),
+       align=(c("l","l","l","r", "r", "r", "r", "r")),
+      format.args = list(big.mark = ','),
+       linesep="") %>%
+    #column_spec(1, width = "1.5in") %>%
+    kable_styling( latex_options="HOLD_position"   ) %>%
+    column_spec(c(1,2), width = "7em", italic=TRUE) %>%
+    column_spec(c(3), width = "7em") %>%
+    row_spec(0,bold = TRUE) %>%
+    footnote(general="Due to rounding, not all values will add up exactly.", general_title="", threeparttable=TRUE)
+tim24
+
+rm(tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7 )
+```
+
+## Table 25: Carbon storage by FIA land use classes across previous and current measurement periods, `r city_name`, `r report_year`
+
+```{r, Table 25: Carbon storage by FIA Landuse between T1 and T2, echo=FALSE, warning=FALSE, message=FALSE, error=FALSE}
+
+#---#---#---#---#---#---#---#---#---#---
+#---#---#---#---#---#---#---#---#---#---
+# T1 
+#---#---#---#---#---#---#---#---#---#---
+#---#---#---#---#---#---#---#---#---#---
+# FIA Landuse sums and standard errors
+tmp1 <-   filter(FIATree_prev, STATUSCD == 1 | STATUSCD ==2) %>%       #live and dead trees
+          group_by(LAND_USE_10, STRATUM_LABEL, STRATUM_CN, PLT_CN) %>%
+          summarize(TRE_ADJ = sum(C_STORAGE_LBS_ADJ/2000, na.rm = T), #convert to tons
+                    .groups = 'drop') %>%
+          group_by(LAND_USE_10, STRATUM_LABEL, STRATUM_CN) %>%
+          summarize(tot_s = sum(TRE_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+                    tot_s2 = sum(TRE_ADJ^2), # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)
+                    .groups = 'drop')
+  
+tmp2 <-  right_join(select(Stratum_prev, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_CN, STRATUM_PLOT_COUNT, STRATUM_WEIGHT), tmp1, by = "STRATUM_CN") %>% # join to POP_STATUM values
+mutate(var_tot = ((tot_s2 - STRATUM_PLOT_COUNT * ((tot_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))), # v(P_hd) eq 4.4
+       TOT_pop = ESTN_UNIT_ACRES * STRATUM_WEIGHT * tot_s/ STRATUM_PLOT_COUNT,
+       TOT_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_tot) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_tot)) # calculate species - stratum variance
+
+tmp3 <- tmp2 %>% group_by(LAND_USE_10) %>% 
+                  summarize(T1_TOT_POP = sum(TOT_pop, na.rm = T),
+                  T1_TOT_VAR = sum(TOT_var, na.rm = T),
+                  .groups = 'drop'
+                    ) %>% 
+                  mutate(T1_TOT_STND_ERR = sqrt(T1_TOT_VAR)) # LU SE
+
+#---#---#---#---#---#---#---#---#---#---
+# Total sums and standard errors for total row
+
+tmp4 <-   filter(FIATree_prev, STATUSCD == 1 | STATUSCD ==2) %>%       #live and dead trees
+          group_by(STRATUM_LABEL, STRATUM_CN, PLT_CN) %>%
+          summarize(TRE_ADJ = sum(C_STORAGE_LBS_ADJ/2000, na.rm = T), #convert to tons
+                    .groups = 'drop') %>%
+          group_by(STRATUM_LABEL, STRATUM_CN) %>%
+          summarize(tot_s = sum(TRE_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+                    tot_s2 = sum(TRE_ADJ^2), # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)
+                    .groups = 'drop')
+
+tmp5 <-  right_join(select(Stratum_prev, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_CN, STRATUM_PLOT_COUNT, STRATUM_WEIGHT), tmp4, by = "STRATUM_CN") %>% # join to POP_STATUM values
+mutate(var_tot = ((tot_s2 - STRATUM_PLOT_COUNT * ((tot_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))), # v(P_hd) eq 4.4
+       TOT_pop = ESTN_UNIT_ACRES * STRATUM_WEIGHT * tot_s/ STRATUM_PLOT_COUNT,
+       TOT_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_tot) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_tot)) # calculate species - stratum variance
+
+tmp6 <- tmp5 %>% group_by (EVALID) %>% summarize(T1_TOT_POP = sum(TOT_pop, na.rm = T),
+                  T1_TOT_VAR = sum(TOT_var, na.rm = T),
+                  .groups = 'drop'
+                    ) %>% 
+                  mutate(T1_TOT_STND_ERR = sqrt(T1_TOT_VAR),
+                         LAND_USE_10 = "Total")
+
+
+#---#---#---#---#---#---#---#---#---#---
+#---#---#---#---#---#---#---#---#---#---
+# T2 
+#---#---#---#---#---#---#---#---#---#---
+#---#---#---#---#---#---#---#---#---#---
+# Species sums and standard errors
+tmp7 <-   filter(FIATree, STATUSCD == 1 | STATUSCD ==2) %>%       #live and dead trees
+          group_by(LAND_USE_10, STRATUM_LABEL, STRATUM_CN, PLT_CN) %>%
+          summarize(TRE_ADJ = sum(C_STORAGE_LBS_ADJ/2000, na.rm = T), #convert to tons
+                    .groups = 'drop') %>%
+          group_by(LAND_USE_10, STRATUM_LABEL, STRATUM_CN) %>%
+          summarize(tot_s = sum(TRE_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+                    tot_s2 = sum(TRE_ADJ^2), # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)
+                    .groups = 'drop')
+  
+tmp8 <-  right_join(select(Stratum, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_CN, STRATUM_PLOT_COUNT, STRATUM_WEIGHT), tmp7, by = "STRATUM_CN") %>% # join to POP_STATUM values
+mutate(var_tot = ((tot_s2 - STRATUM_PLOT_COUNT * ((tot_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))), # v(P_hd) eq 4.4
+       TOT_pop = ESTN_UNIT_ACRES * STRATUM_WEIGHT * tot_s/ STRATUM_PLOT_COUNT,
+       TOT_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_tot) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_tot)) # calculate species - stratum variance
+
+tmp9 <- tmp8 %>% group_by(LAND_USE_10) %>% 
+                  summarize(T2_TOT_POP = sum(TOT_pop, na.rm = T),
+                  T2_TOT_VAR = sum(TOT_var, na.rm = T),
+                  .groups = 'drop'
+                    ) %>% 
+                  mutate(T2_TOT_STND_ERR = sqrt(T2_TOT_VAR)) # species SE
+
+#---#---#---#---#---#---#---#---#---#---
+# Total sums and standard errors for total row
+
+tmp10 <-  filter(FIATree, STATUSCD == 1 | STATUSCD ==2) %>%       #live and dead trees
+          group_by(STRATUM_LABEL, STRATUM_CN, PLT_CN) %>%
+          summarize(TRE_ADJ = sum(C_STORAGE_LBS_ADJ/2000, na.rm = T), #convert to tons
+                    .groups = 'drop') %>%
+          group_by(STRATUM_LABEL, STRATUM_CN) %>%
+          summarize(tot_s = sum(TRE_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+                    tot_s2 = sum(TRE_ADJ^2), # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)
+                    .groups = 'drop')
+
+tmp11 <-  right_join(select(Stratum, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_CN, STRATUM_PLOT_COUNT, STRATUM_WEIGHT), tmp10, by = "STRATUM_CN") %>% # join to POP_STATUM values
+mutate(var_tot = ((tot_s2 - STRATUM_PLOT_COUNT * ((tot_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))), # v(P_hd) eq 4.4
+       TOT_pop = ESTN_UNIT_ACRES * STRATUM_WEIGHT * tot_s/ STRATUM_PLOT_COUNT,
+       TOT_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_tot) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_tot)) # calculate species - stratum variance
+
+tmp12 <- tmp11 %>% group_by (EVALID) %>% summarize(T2_TOT_POP = sum(TOT_pop, na.rm = T),
+                  T2_TOT_VAR = sum(TOT_var, na.rm = T),
+                  .groups = 'drop'
+                    ) %>% 
+                  mutate(T2_TOT_STND_ERR = sqrt(T2_TOT_VAR),
+                         LAND_USE_10 = "Total")
+
+#---#---#---#---#---#---#---#---#---#---
+# joining T1 and T2 data frames
+tmp13 <- full_join(tmp3[-3], tmp9[-3], by = c("LAND_USE_10")) %>% arrange(LAND_USE_10)
+
+#---#---#---#---#---#---#---#---#---#---
+# Adding total rows to dataframe
+
+tot_row <- join(tmp6[c(5,2,4)], tmp12[c(5,2,4)], by = "LAND_USE_10")
+
+tmp14 <- rbind(tmp13, tot_row)
+
+#---#---#---#---#---#---#---#---#---#---
+# Percent change between T2 and T1
+
+tmp14 <- tmp14 %>% mutate(PCT_CHG = ((T2_TOT_POP - T1_TOT_POP)/T1_TOT_POP)*100)
+
+
+
+
+
+options(knitr.kable.NA = '--')
+
+tim25<-kable(tmp14, format = "html",
+       booktabs = TRUE,
+       longtable = T,
+       digits=c(0,0,0,0,0,1),
+       # caption= tab.25_cap,
+       col.names = (c("FIA land use", "Carbon storage in 2018 (tons)", "Standard error in 2018 (tons)", "Carbon storage in 2019 (tons)", "Standard error in 2019 (tons)", "Percent change")),
+       align=(c("l", "r", "r", "r", "r", "r")),
+      format.args = list(big.mark = ','),
+       linesep="") %>%
+    kable_styling(latex_options="HOLD_position") %>%
+    row_spec(0,bold = TRUE)%>%
+    row_spec(nrow(tmp14), bold = TRUE) %>%
+    footnote(general="Due to rounding, not all values will add up exactly.", general_title="", threeparttable=TRUE)
+
+tim25
+
+rm(tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7, tmp8, tmp9, tmp10, tmp11, tmp12, tmp13, tot_row, tmp14  )
+```
+
+## Table 26: Invasive species across T1 and T2, `r city_name`, `r report_year` 
+
+```{r, Table 26: Invasive species across T1 and T2, echo=FALSE, warning=FALSE, message=FALSE, error=FALSE}
+
+#---#---#---#---#---#---#---#---#---#---
+#---#---#---#---#---#---#---#---#---#---
+# T1 
+#---#---#---#---#---#---#---#---#---#---
+#---#---#---#---#---#---#---#---#---#---
+
+# Total area and standard errors per species 
+
+tmp1 <- select(Invasive_prev, COMMON_NAME, STRATUM_LABEL, STRATUM_CN, ICOV_ADJ, PLT_CN) %>% 
+          group_by(COMMON_NAME, STRATUM_LABEL, STRATUM_CN, PLT_CN) %>%
+          summarize(INV_ADJ = sum(ICOV_ADJ), #sum to plot - sample unit
+                    .groups = 'drop')  %>% 
+          group_by(COMMON_NAME, STRATUM_LABEL, STRATUM_CN) %>%
+          summarize(inv_s = sum(INV_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+                    inv_s2 = sum(INV_ADJ^2),  #TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)) 
+                    .groups = 'drop')
+
+tmp2 <-  right_join(select(Stratum_prev, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_CN, STRATUM_PLOT_COUNT, STRATUM_WEIGHT), tmp1, by = "STRATUM_CN") %>% # join to POP_STATUM values
+mutate(var_inv = ((inv_s2 - STRATUM_PLOT_COUNT * ((inv_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))),
+       INV_pop =  ESTN_UNIT_ACRES * STRATUM_WEIGHT * inv_s/ STRATUM_PLOT_COUNT,
+       INV_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_inv) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_inv)) # calculate stratum-damage variance
+
+tmp3<- tmp2 %>% group_by(COMMON_NAME) %>% 
+                  summarize(T1_INV_POP_SPP = sum(INV_pop, na.rm = T),
+                  T1_INV_VAR_SPP = sum(INV_var, na.rm = T)) %>%
+                mutate(T1_INV_STND_ERR_SPP = sqrt(T1_INV_VAR_SPP)) 
+
+#---#---#---#---#---#---#---#---#---#---
+# Total area and standard error for TOTAL ROW
+
+tmp4 <- select(Invasive_prev, STRATUM_LABEL, STRATUM_CN, ICOV_ADJ, PLT_CN) %>% 
+          group_by(STRATUM_LABEL, STRATUM_CN, PLT_CN) %>%
+          summarize(INV_ADJ = sum(ICOV_ADJ), #sum to plot - sample unit
+                    .groups = 'drop')  %>% 
+          group_by(STRATUM_LABEL, STRATUM_CN) %>%
+          summarize(inv_s = sum(INV_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+                    inv_s2 = sum(INV_ADJ^2),  #TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)) 
+                    .groups = 'drop')
+
+tmp5 <-  right_join(select(Stratum_prev, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_CN, STRATUM_PLOT_COUNT, STRATUM_WEIGHT), tmp4, by = "STRATUM_CN") %>% # join to POP_STATUM values
+mutate(var_inv = ((inv_s2 - STRATUM_PLOT_COUNT * ((inv_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))),
+       INV_pop =  ESTN_UNIT_ACRES * STRATUM_WEIGHT * inv_s/ STRATUM_PLOT_COUNT,
+       INV_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_inv) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_inv)) # calculate stratum-damage variance
+
+tmp6 <- tmp5%>% group_by(EVALID) %>% 
+                  summarize(T1_INV_POP_SPP = sum(INV_pop, na.rm = T),
+                  T1_INV_VAR_SPP = sum(INV_var, na.rm = T)) %>%
+                mutate(T1_INV_STND_ERR_SPP = sqrt(T1_INV_VAR_SPP),
+                       COMMON_NAME = 'Total') 
+
+#---#---#---#---#---#---#---#---#---#---
+#---#---#---#---#---#---#---#---#---#---
+# T2 
+#---#---#---#---#---#---#---#---#---#---
+#---#---#---#---#---#---#---#---#---#---
+
+# Total area and standard errors per species 
+
+tmp7 <- select(Invasive, COMMON_NAME, STRATUM_LABEL, STRATUM_CN, ICOV_ADJ, PLT_CN) %>% 
+          group_by(COMMON_NAME, STRATUM_LABEL, STRATUM_CN, PLT_CN) %>%
+          summarize(INV_ADJ = sum(ICOV_ADJ), #sum to plot - sample unit
+                    .groups = 'drop')  %>% 
+          group_by(COMMON_NAME, STRATUM_LABEL, STRATUM_CN) %>%
+          summarize(inv_s = sum(INV_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+                    inv_s2 = sum(INV_ADJ^2),  #TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)) 
+                    .groups = 'drop')
+
+tmp8 <-  right_join(select(Stratum, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_CN, STRATUM_PLOT_COUNT, STRATUM_WEIGHT), tmp7, by = "STRATUM_CN") %>% # join to POP_STATUM values
+mutate(var_inv = ((inv_s2 - STRATUM_PLOT_COUNT * ((inv_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))),
+       INV_pop =  ESTN_UNIT_ACRES * STRATUM_WEIGHT * inv_s/ STRATUM_PLOT_COUNT,
+       INV_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_inv) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_inv)) # calculate stratum-damage variance
+
+tmp9 <- tmp8 %>% group_by(COMMON_NAME) %>% 
+                  summarize(T2_INV_POP_SPP = sum(INV_pop, na.rm = T),
+                  T2_INV_VAR_SPP = sum(INV_var, na.rm = T)) %>%
+                mutate(T2_INV_STND_ERR_SPP = sqrt(T2_INV_VAR_SPP)) 
+
+#---#---#---#---#---#---#---#---#---#---
+# Total area and standard error for TOTAL ROW
+
+tmp10 <- select(Invasive, STRATUM_LABEL, STRATUM_CN, ICOV_ADJ, PLT_CN) %>% 
+          group_by(STRATUM_LABEL, STRATUM_CN, PLT_CN) %>%
+          summarize(INV_ADJ = sum(ICOV_ADJ), #sum to plot - sample unit
+                    .groups = 'drop')  %>% 
+          group_by(STRATUM_LABEL, STRATUM_CN) %>%
+          summarize(inv_s = sum(INV_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+                    inv_s2 = sum(INV_ADJ^2),  #TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)) 
+                    .groups = 'drop')
+
+tmp11 <-  right_join(select(Stratum, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_CN, STRATUM_PLOT_COUNT, STRATUM_WEIGHT), tmp10, by = "STRATUM_CN") %>% # join to POP_STATUM values
+mutate(var_inv = ((inv_s2 - STRATUM_PLOT_COUNT * ((inv_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))),
+       INV_pop =  ESTN_UNIT_ACRES * STRATUM_WEIGHT * inv_s/ STRATUM_PLOT_COUNT,
+       INV_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_inv) +
+            (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_inv)) # calculate stratum-damage variance
+
+tmp12 <- tmp11 %>% group_by(EVALID) %>% 
+                  summarize(T2_INV_POP_SPP = sum(INV_pop, na.rm = T),
+                  T2_INV_VAR_SPP = sum(INV_var, na.rm = T)) %>%
+                mutate(T2_INV_STND_ERR_SPP = sqrt(T2_INV_VAR_SPP),
+                       COMMON_NAME = 'Total') 
+
+
+#---#---#---#---#---#---#---#---#---#---
+# joining T1 and T2 data frames
+tmp13 <- full_join(tmp3[-3], tmp9[-3], by = c("COMMON_NAME")) %>% arrange(COMMON_NAME)
+
+#---#---#---#---#---#---#---#---#---#---
+# Adding total rows to dataframe
+
+tot_row <- join(tmp6[c(5,2,4)], tmp12[c(5,2,4)], by = "COMMON_NAME")
+
+tmp14 <- rbind(tmp13, tot_row)
+
+#---#---#---#---#---#---#---#---#---#---
+# Percent change between T2 and T1
+
+tmp14 <- tmp14 %>% mutate(PCT_CHG = ((T2_INV_POP_SPP - T1_INV_POP_SPP)/T1_INV_POP_SPP)*100)
+
+
+#   custom rounding for if less than 0.1, round to 1 decimal.
+table(tmp14$T2_INV_STND_ERR_SPP > 0.5)
+
+
+num<-c(5, 2, 7, .2)
+
+class(num)
+
+cround<-function(x){
+  if(is.na( x )) {x <- NA}
+  else if(x < 1) { round(as.numeric(x), digits=2)}
+  else if(x >1) {x}
+  return(x) }
+     
+
+
+roundBM_PCT <- function(a) {
+  if(is.na(a)) {b <- NA}
+  else if(abs(a) > 1000000) {
+  b <- format(round(as.numeric(a), digits = -4), big.mark = ',', scientific = F)
+} else if(abs(a) > 10000) {
+  b <- format(round(as.numeric(a), digits = -3), big.mark = ',', scientific = F)
+} else if(abs(a) >= 1000) {
+  b <- format(round(as.numeric(a), digits = -2), big.mark = ',', scientific = F)
+} else if(abs(a) > 100) {
+  b <- round(as.numeric(a), digits = -1)
+} else {
+  b <- round(as.numeric(a), digits = 1)
+} 
+  return(b)
+}
+
+
+
+tim26<-kable(tmp14, format = "html",
+       booktabs = TRUE,
+       longtable = T,
+       digits=c(0,0,0,0,0,1),
+#  caption= tab.26_cap,
+       col.names = (c("Invasive plant", "Area in 2018 (acres)", "Standard error in 2018 (acres)", "Area in 2019 (acres)", "Standard error in 2019 (acres)", "Percent change")),
+       align=(c("l", "r", "r", "r", "r", "r")),
+      format.args = list(big.mark = ','), linesep="") %>%
+   kable_styling(latex_options="HOLD_position") %>%
+    # kable_styling(latex_options=c("repeat_header"), , font_size = 9)%>%
+    # add_header_above(c(" " = 1, "2018" = 2, "2019" = 2, " " = 1), bold=TRUE, line=TRUE, align="c")%>%
+    row_spec(0,bold = TRUE) %>%
+    row_spec(nrow(tmp14), bold = TRUE) %>%
+    footnote(general="Due to rounding, not all values will add up exactly.", general_title="", threeparttable=TRUE)
+  
+
+tim26
+
+rm(tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7, tmp8, tmp9, tmp10, tmp11, tmp12, tmp13, tot_row, tmp14)
+```
+
+## Bullet 1: Number of planted trees by species and owner class
+
+```{r, planted trees by species and owner, echo=FALSE, warning=FALSE, message=FALSE, error=FALSE}
+
+
+LivePlanted <- filter(FIATree, STATUSCD == 1 & PLANTED_LAB =="Planted")
+
+tmp1 <- LivePlanted %>% group_by(OWNER_GROUP, COMMON_NAME, STRATUM_CN, PLT_CN)%>%
+  summarize(TRE_ADJ = sum(TREE_ADJ),  #sum to plot - sample unit
+            .groups = 'drop') %>%        
+  group_by(OWNER_GROUP, COMMON_NAME,STRATUM_CN) %>%
+  summarize(tre_s = sum(TRE_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+            tre_s2 = sum(TRE_ADJ^2),  # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)) 
+            .groups = 'drop')
+
+
+tmp2 <-  right_join(select(Stratum, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_PLOT_COUNT, STRATUM_WEIGHT, STRATUM_CN), tmp1, by = "STRATUM_CN") %>% # join to POP_STATUM values
+  mutate(var_tre = ((tre_s2 - STRATUM_PLOT_COUNT * ((tre_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))),
+         TRE_pop =  ESTN_UNIT_ACRES * STRATUM_WEIGHT * tre_s/ STRATUM_PLOT_COUNT,
+         TRE_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_tre) +
+                                                                  (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_tre)) # calculate stratum-damage variance
+
+#########
+
+
+tmp3 <- tmp2 %>% group_by(OWNER_GROUP, COMMON_NAME) %>% 
+  summarize(TRE_POP = sum(TRE_pop, na.rm = T),
+            TRE_VAR = sum(TRE_var, na.rm = T),
+            .groups = 'drop') %>%
+  mutate(TRE_STND_ERR = sqrt(TRE_VAR),
+         TRE_PCT_WHOLE_POP = (TRE_POP/sum(tmp2$TRE_POP))*100) 
+
+
+## Should it be iTreeTree in the last line?   (FIATree and iTreeTree have the same number of live trees.)
+
+
+##############
+
+#---#---#---#---#---#---#---#---#---#---
+# Total planted trees - for total row
+  
+tmp7 <- LivePlanted %>% group_by(OWNER_GROUP,STRATUM_CN, PLT_CN) %>%
+  summarize(TRE_ADJ = sum(TREE_ADJ),  #sum to plot - sample unit
+            .groups = 'drop') %>%        
+  group_by(OWNER_GROUP,STRATUM_CN) %>%
+  summarize(tre_s = sum(TRE_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+            tre_s2 = sum(TRE_ADJ^2),  # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)) 
+            .groups = 'drop')
+
+
+tmp8 <-  right_join(select(Stratum, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_PLOT_COUNT, STRATUM_WEIGHT, STRATUM_CN), tmp7, by = "STRATUM_CN") %>% # join to POP_STATUM values
+  mutate(var_tre = ((tre_s2 - STRATUM_PLOT_COUNT * ((tre_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))),
+         TRE_pop =  ESTN_UNIT_ACRES * STRATUM_WEIGHT * tre_s/ STRATUM_PLOT_COUNT,
+         TRE_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_tre) +
+                                                                  (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_tre)) # calculate stratum-damage variance
+
+
+tmp9 <- tmp8 %>% group_by(OWNER_GROUP) %>% 
+  summarize(TRE_POP = sum(TRE_pop, na.rm = T),
+            TRE_VAR = sum(TRE_var, na.rm = T),
+            .groups = 'drop') %>%
+  mutate(TRE_STND_ERR = sqrt(TRE_VAR),
+         COMMON_NAME = 'Total',
+         TRE_PCT_WHOLE_POP = (TRE_POP/sum(filter(FIATree, STATUSCD ==1)$TREES_PER_PLOT))*100) 
+
+### now work with tmp3 to get ownerships as columns- pop estimates and standard error
+tre_pop<-spread(tmp3[ ,c("COMMON_NAME", "OWNER_GROUP","TRE_POP")], "OWNER_GROUP","TRE_POP")
+tre_stnd_err<-spread(tmp3[ ,c("COMMON_NAME", "OWNER_GROUP","TRE_STND_ERR")], "OWNER_GROUP","TRE_STND_ERR")
+
+tre_pop_tot<-spread(tmp9[ ,c("COMMON_NAME", "OWNER_GROUP","TRE_POP")], "OWNER_GROUP","TRE_POP")
+tre_stnd_err_tot<-spread(tmp9[ ,c("COMMON_NAME", "OWNER_GROUP","TRE_STND_ERR")], "OWNER_GROUP","TRE_STND_ERR")
+
+
+## add in the row calulated from 'total' per owner group
+tre_pop<-rbind(tre_pop, tre_pop_tot)
+tre_stnd_err<-rbind(tre_stnd_err, tre_stnd_err_tot)
+
+# bring in the re-named SE columns
+tre_pop$se_OtherFederal<-tre_stnd_err$OtherFederal
+tre_pop$se_Private<-tre_stnd_err$Private
+tre_pop$se_StateLocal<-tre_stnd_err$StateLocal
+
+
+planted_Trees_owner_group <- cbind(tre_pop[ ,"COMMON_NAME"],tre_pop[ ,"OtherFederal"], tre_pop[ ,"se_OtherFederal"],tre_pop[ ,"Private"], tre_pop[ ,"se_Private"],tre_pop[ ,"StateLocal"], tre_pop[ ,"se_StateLocal"])
+
+ planted_Trees_owner_group[is.na(planted_Trees_owner_group)] <-0
+
+planted_Trees_owner_group$OtherFederal<-format(round(planted_Trees_owner_group$OtherFederal, digits=0), big.mark=",")
+planted_Trees_owner_group$se_OtherFederal<-format(round(planted_Trees_owner_group$se_OtherFederal, digits=0), big.mark=",")
+
+planted_Trees_owner_group$Private<-format(round(planted_Trees_owner_group$Private, digits=0),  big.mark=",")
+planted_Trees_owner_group$se_Private<-format(round(planted_Trees_owner_group$se_Private, digits=0),  big.mark=",")
+
+planted_Trees_owner_group$StateLocal<-format(round(planted_Trees_owner_group$StateLocal, digits=0),  big.mark=",")
+planted_Trees_owner_group$se_StateLocal<-format(round(planted_Trees_owner_group$se_StateLocal, digits=0),  big.mark=",")
+
+
+a <- nrow(planted_Trees_owner_group)
+
+timp<- kable(planted_Trees_owner_group, format = "html",
+       booktabs = TRUE,
+  #     digits =c(0,0,0,1),
+  # caption = tab. _cap,
+       col.names = (c("Common name","Planted trees on federal land (number)", "Standard error for federal land(number)",
+                      "Planted trees on private land (number)", "Standard error for private land(number)",
+                      "Planted trees on state or local land (number)", "Standard error for state or local land(number)")) ,
+       align = c("l","r", "r", "r","r", "r", "r"),
+     #  format.args = list(big.mark = ','),
+       linesep = "") %>%
+   kable_styling(latex_options="HOLD_position")%>%
+    row_spec(0, bold=TRUE) %>%
+    row_spec(a, bold=TRUE) %>%
+    footnote(general = c("Due to rounding, not all values will add up exactly."), general_title = "", threeparttable = TRUE)
+
+timp
+
+```
+
+
+
+## Bullet 2: Number of riparian trees by species and diameter class  (providing there is enough data?)
+
+```{r, riparian trees by species and diameter, echo=FALSE, warning=FALSE, message=FALSE, error=FALSE}
+
+# 	Number of riparian trees by species
+
+
+ripa <- filter(FIATree, STATUSCD == 1 & RIPARIAN_LAB =="Yes")
+
+ripa <- ripa %>% mutate(DIA_cat = cut(DIA, c(0,5,11,Inf), labels=c("sapling","medium", "large"), right = FALSE))
+
+
+
+tmp1 <- ripa %>% group_by(COMMON_NAME, DIA_cat, STRATUM_CN, PLT_CN)%>%
+  summarize(TRE_ADJ = sum(TREE_ADJ),  #sum to plot - sample unit
+            .groups = 'drop') %>%        
+  group_by(COMMON_NAME, DIA_cat,STRATUM_CN) %>%
+  summarize(tre_s = sum(TRE_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+            tre_s2 = sum(TRE_ADJ^2),  # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)) 
+            .groups = 'drop')
+
+
+
+
+tmp2 <-  right_join(select(Stratum, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_PLOT_COUNT, STRATUM_WEIGHT, STRATUM_CN), tmp1, by = "STRATUM_CN") %>% # join to POP_STATUM values
+  mutate(var_tre = ((tre_s2 - STRATUM_PLOT_COUNT * ((tre_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))),
+         TRE_pop =  ESTN_UNIT_ACRES * STRATUM_WEIGHT * tre_s/ STRATUM_PLOT_COUNT,
+         TRE_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_tre) +
+         (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_tre)) # calculate stratum-damage variance
+
+#########
+
+
+tmp3 <- tmp2 %>% group_by(COMMON_NAME, DIA_cat) %>% 
+  summarize(TRE_POP = sum(TRE_pop, na.rm = T),
+            TRE_VAR = sum(TRE_var, na.rm = T),
+            .groups = 'drop') %>%
+  mutate(TRE_STND_ERR = sqrt(TRE_VAR),
+         TRE_PCT_WHOLE_POP = (TRE_POP/sum(filter(iTreeTree, STATUSCD == 1)$TREES_PER_PLOT))*100) 
+
+
+## Should it be iTreeTree in the last line?   (FIATree and iTreeTree have the same number of live trees.)
+
+
+##############
+
+#---#---#---#---#---#---#---#---#---#---
+# Total planted trees - for total row
+
+
+tmp7 <- ripa %>% group_by(DIA_cat, STRATUM_CN, PLT_CN) %>%
+  summarize(TRE_ADJ = sum(TREE_ADJ),  #sum to plot - sample unit
+            .groups = 'drop') %>%        
+  group_by(DIA_cat,STRATUM_CN) %>%
+  summarize(tre_s = sum(TRE_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+            tre_s2 = sum(TRE_ADJ^2),  # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)) 
+            .groups = 'drop')
+
+
+
+tmp8 <-  right_join(select(Stratum, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_PLOT_COUNT, STRATUM_WEIGHT, STRATUM_CN), tmp7, by = "STRATUM_CN") %>% # join to POP_STATUM values
+  mutate(var_tre = ((tre_s2 - STRATUM_PLOT_COUNT * ((tre_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))),
+         TRE_pop =  ESTN_UNIT_ACRES * STRATUM_WEIGHT * tre_s/ STRATUM_PLOT_COUNT,
+         TRE_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_tre) +
+                                                                  (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_tre)) # calculate stratum-damage variance
+
+
+
+tmp9 <- tmp8 %>% group_by(DIA_cat) %>% 
+  summarize(TRE_POP = sum(TRE_pop, na.rm = T),
+            TRE_VAR = sum(TRE_var, na.rm = T),
+            .groups = 'drop') %>%
+  mutate(TRE_STND_ERR = sqrt(TRE_VAR),
+         COMMON_NAME = 'Total',
+         TRE_PCT_WHOLE_POP = (TRE_POP/sum(filter(FIATree, STATUSCD ==1)$TREES_PER_PLOT))*100) 
+
+
+
+
+
+### now work with tmp3 to get ownerships as columns- pop estimates and standard error
+tre_pop<-spread(tmp3[ ,c("COMMON_NAME", "DIA_cat","TRE_POP")], "DIA_cat","TRE_POP")
+tre_stnd_err<-spread(tmp3[ ,c("COMMON_NAME", "DIA_cat","TRE_STND_ERR")], "DIA_cat","TRE_STND_ERR")
+
+tre_pop_tot<-spread(tmp9[ ,c("COMMON_NAME", "DIA_cat","TRE_POP")], "DIA_cat","TRE_POP")
+tre_stnd_err_tot<-spread(tmp9[ ,c("COMMON_NAME", "DIA_cat","TRE_STND_ERR")], "DIA_cat","TRE_STND_ERR")
+
+
+
+## add in the row calulated from 'total' per owner group
+
+tre_pop<-rbind(tre_pop, tre_pop_tot)
+tre_stnd_err<-rbind(tre_stnd_err, tre_stnd_err_tot)
+
+# bring in the re-named SE columns
+tre_pop$se_sapling<-tre_stnd_err$sapling
+tre_pop$se_medium<-tre_stnd_err$medium
+tre_pop$se_large<-tre_stnd_err$large
+
+#####################################################################
+
+# ripa_diams <- cbind(tre_pop[ ,1],tre_pop[ ,"sapling"], tre_pop[ ,"se_sapling"],tre_pop[ ,"medium"], tre_pop[ ,"se_medium"],tre_pop[ ,"large"], tre_pop[ ,"se_large"])
+
+ripa_diams <- cbind(tre_pop[ ,1],tre_pop[ ,"medium"], tre_pop[ ,"se_medium"],tre_pop[ ,"large"], tre_pop[ ,"se_large"])
+
+ripa_diams[is.na(ripa_diams)] <-0
+
+zer <- dim(ripa_diams)[1]
+
+
+ripa_diams$sapling<-rep(0,zer)
+ripa_diams$se_sapling<-rep(0,zer)
+# ripa_diams$se_sapling<-format(round(ripa_diams$se_sapling, digits=0), big.mark=",")
+
+ripa_diams$medium<-format(round(ripa_diams$medium, digits=0),  big.mark=",")
+ripa_diams$se_medium<-format(round(ripa_diams$se_medium, digits=0),  big.mark=",")
+
+ripa_diams$large<-format(round(ripa_diams$large, digits=0),  big.mark=",")
+ripa_diams$se_large<-format(round(ripa_diams$se_large, digits=0),  big.mark=",")
+
+
+ripa_diams<-ripa_diams[ ,c("COMMON_NAME","sapling","se_sapling","medium","se_medium","large","se_large")]
+
+a <- nrow(ripa_diams)
+
+timr<-  kable(ripa_diams, format = "html",
+              booktabs = TRUE,
+              #     digits =c(0,0,0,1),
+              # caption = tab. _cap,
+              col.names = (c("FIA land use","1-4.9 in. diameter trees (number)","Standard error",
+                             "5-10.9 in. diameter trees (number)","Standard error",
+                             "11+ in. diameter trees (number)","Standard error")),
+              align = c("l","r", "r", "r","r", "r", "r"),
+              #  format.args = list(big.mark = ','),
+              linesep = "") %>%
+  kable_styling(latex_options="HOLD_position")%>%
+  row_spec(0, bold=TRUE) %>%
+  row_spec(a, bold=TRUE) %>%
+  footnote(general = c("Due to rounding, not all values will add up exactly."), general_title = "", threeparttable = TRUE)
+
+timr
+```
+
+## Bullet 3: Number of street trees by land use and diameter class
+
+
+```{r, street trees by land use and diameter, echo=FALSE, warning=FALSE, message=FALSE, error=FALSE}
+
+street_lu <- filter(FIATree, STATUSCD == 1 & STREET_TREE_LAB =="Yes")
+
+street_lu <- street_lu %>% mutate(DIA_cat = cut(DIA, c(0,5,11,Inf), labels=c("sapling","medium", "large"), right = FALSE))
+
+
+
+tmp1 <- street_lu %>% group_by(LAND_USE, DIA_cat, STRATUM_CN, PLT_CN)%>%
+  summarize(TRE_ADJ = sum(TREE_ADJ),  #sum to plot - sample unit
+            .groups = 'drop') %>%        
+  group_by(LAND_USE, DIA_cat,STRATUM_CN) %>%
+  summarize(tre_s = sum(TRE_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+            tre_s2 = sum(TRE_ADJ^2),  # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)) 
+            .groups = 'drop')
+
+
+
+
+tmp2 <-  right_join(select(Stratum, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_PLOT_COUNT, STRATUM_WEIGHT, STRATUM_CN), tmp1, by = "STRATUM_CN") %>% # join to POP_STATUM values
+  mutate(var_tre = ((tre_s2 - STRATUM_PLOT_COUNT * ((tre_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))),
+         TRE_pop =  ESTN_UNIT_ACRES * STRATUM_WEIGHT * tre_s/ STRATUM_PLOT_COUNT,
+         TRE_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_tre) +
+         (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_tre)) # calculate stratum-damage variance
+
+#########
+
+
+tmp3 <- tmp2 %>% group_by(LAND_USE, DIA_cat) %>% 
+  summarize(TRE_POP = sum(TRE_pop, na.rm = T),
+            TRE_VAR = sum(TRE_var, na.rm = T),
+            .groups = 'drop') %>%
+  mutate(TRE_STND_ERR = sqrt(TRE_VAR),
+         TRE_PCT_WHOLE_POP = (TRE_POP/sum(filter(iTreeTree, STATUSCD == 1)$TREES_PER_PLOT))*100) 
+
+
+## Should it be iTreeTree in the last line?   (FIATree and iTreeTree have the same number of live trees.)
+
+
+##############
+
+#---#---#---#---#---#---#---#---#---#---
+# Total planted trees - for total row
+
+
+
+tmp7 <- street_lu %>% group_by(DIA_cat, STRATUM_CN, PLT_CN) %>%
+  summarize(TRE_ADJ = sum(TREE_ADJ),  #sum to plot - sample unit
+            .groups = 'drop') %>%        
+  group_by(DIA_cat,STRATUM_CN) %>%
+  summarize(tre_s = sum(TRE_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+            tre_s2 = sum(TRE_ADJ^2),  # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)) 
+            .groups = 'drop')
+
+
+
+tmp8 <-  right_join(select(Stratum, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_PLOT_COUNT, STRATUM_WEIGHT, STRATUM_CN), tmp7, by = "STRATUM_CN") %>% # join to POP_STATUM values
+  mutate(var_tre = ((tre_s2 - STRATUM_PLOT_COUNT * ((tre_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))),
+         TRE_pop =  ESTN_UNIT_ACRES * STRATUM_WEIGHT * tre_s/ STRATUM_PLOT_COUNT,
+         TRE_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_tre) +
+                                                                  (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_tre)) # calculate stratum-damage variance
+
+
+
+tmp9 <- tmp8 %>% group_by(DIA_cat) %>% 
+  summarize(TRE_POP = sum(TRE_pop, na.rm = T),
+            TRE_VAR = sum(TRE_var, na.rm = T),
+            .groups = 'drop') %>%
+  mutate(TRE_STND_ERR = sqrt(TRE_VAR),
+         LAND_USE = 'Total',
+         TRE_PCT_WHOLE_POP = (TRE_POP/sum(filter(FIATree, STATUSCD ==1)$TREES_PER_PLOT))*100) 
+
+
+
+
+### now work with tmp3 to get ownerships as columns- pop estimates and standard error
+tre_pop<-spread(tmp3[ ,c("LAND_USE", "DIA_cat","TRE_POP")], "DIA_cat","TRE_POP")
+tre_stnd_err<-spread(tmp3[ ,c("LAND_USE", "DIA_cat","TRE_STND_ERR")], "DIA_cat","TRE_STND_ERR")
+
+tre_pop_tot<-spread(tmp9[ ,c("LAND_USE", "DIA_cat","TRE_POP")], "DIA_cat","TRE_POP")
+tre_stnd_err_tot<-spread(tmp9[ ,c("LAND_USE", "DIA_cat","TRE_STND_ERR")], "DIA_cat","TRE_STND_ERR")
+
+
+
+## add in the row calulated from 'total' per owner group
+tre_pop<-rbind(tre_pop, tre_pop_tot)
+tre_stnd_err<-rbind(tre_stnd_err, tre_stnd_err_tot)
+
+# bring in the re-named SE columns
+tre_pop$se_sapling<-tre_stnd_err$sapling
+tre_pop$se_medium<-tre_stnd_err$medium
+tre_pop$se_large<-tre_stnd_err$large
+
+
+
+street_tree_landuse <- cbind(tre_pop[ ,1],tre_pop[ ,"sapling"], tre_pop[ ,"se_sapling"],tre_pop[ ,"medium"], tre_pop[ ,"se_medium"],tre_pop[ ,"large"], tre_pop[ ,"se_large"])
+
+
+ street_tree_landuse[is.na(street_tree_landuse)] <-0
+
+
+street_tree_landuse$sapling<-format(round(street_tree_landuse$sapling, digits=0), big.mark=",")
+street_tree_landuse$se_sapling<-format(round(street_tree_landuse$se_sapling, digits=0), big.mark=",")
+
+street_tree_landuse$medium<-format(round(street_tree_landuse$medium, digits=0),  big.mark=",")
+street_tree_landuse$se_medium<-format(round(street_tree_landuse$se_medium, digits=0),  big.mark=",")
+
+street_tree_landuse$large<-format(round(street_tree_landuse$large, digits=0),  big.mark=",")
+street_tree_landuse$se_large<-format(round(street_tree_landuse$se_large, digits=0),  big.mark=",")
+
+
+ 
+ a <- nrow(street_tree_landuse)
+tims<-  kable(street_tree_landuse, format = "html",
+              booktabs = TRUE,
+              #     digits =c(0,0,0,1),
+              # caption = tab. _cap,
+              col.names = (c("FIA land use","1-4.9 in. diameter trees (number)","Standard error",
+                             "5-10.9 in. diameter trees (number)","Standard error",
+                             "11+ in. diameter trees (number)","Standard error")),
+              align = c("l","r", "r", "r","r", "r", "r"),
+              #  format.args = list(big.mark = ','),
+              linesep = "") %>%
+  kable_styling(latex_options="HOLD_position")%>%
+  row_spec(0, bold=TRUE) %>%
+  row_spec(a, bold=TRUE) %>%
+  footnote(general = c("Due to rounding, not all values will add up exactly."), general_title = "", threeparttable = TRUE)
+
+  tims
+
+
+```
+
+## Bullet 4:Seedling species by land use
+
+
+```{r, seedling by species and land use , echo=FALSE, warning=FALSE, message=FALSE, error=FALSE}
+tmp1 <- Seedling %>% group_by(COMMON_NAME, LAND_USE, STRATUM_CN, PLT_CN)%>%
+  summarize(TRE_ADJ = sum(SEEDLING_ADJ),  #sum to plot - sample unit
+            .groups = 'drop') %>%        
+  group_by(COMMON_NAME,LAND_USE,STRATUM_CN) %>%
+  summarize(tre_s = sum(TRE_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+            tre_s2 = sum(TRE_ADJ^2),  # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)) 
+            .groups = 'drop')
+
+
+
+
+tmp2 <-  right_join(select(Stratum, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_PLOT_COUNT, STRATUM_WEIGHT, STRATUM_CN), tmp1, by = "STRATUM_CN") %>% # join to POP_STATUM values
+  mutate(var_tre = ((tre_s2 - STRATUM_PLOT_COUNT * ((tre_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))),
+         TRE_pop =  ESTN_UNIT_ACRES * STRATUM_WEIGHT * tre_s/ STRATUM_PLOT_COUNT,
+         TRE_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_tre) +
+             (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_tre)) # calculate stratum-damage variance
+#########
+
+
+tmp3 <- tmp2 %>% group_by(COMMON_NAME, LAND_USE) %>% 
+  summarize(TRE_POP = sum(TRE_pop, na.rm = T),
+            TRE_VAR = sum(TRE_var, na.rm = T),
+            .groups = 'drop') %>%
+  mutate(TRE_STND_ERR = sqrt(TRE_VAR),
+         TRE_PCT_WHOLE_POP = (TRE_POP/sum(filter(iTreeTree, STATUSCD == 1)$TREES_PER_PLOT))*100) 
+
+## Should it be iTreeTree in the last line?   (FIATree and iTreeTree have the same number of live trees.)
+
+
+##############
+###
+
+
+tmp7 <- Seedling %>% group_by(LAND_USE, STRATUM_CN, PLT_CN) %>%
+  summarize(TRE_ADJ = sum(SEEDLING_ADJ),  #sum to plot - sample unit
+            .groups = 'drop') %>%        
+  group_by(LAND_USE,STRATUM_CN) %>%
+  summarize(tre_s = sum(TRE_ADJ), #sum trees per stratum; used to calculate P_hd (eq. 4.3)
+            tre_s2 = sum(TRE_ADJ^2),  # TRE_s2 = P_hid (eq. 4.3 and 4.4 p. 60)) 
+            .groups = 'drop')
+
+
+
+tmp8 <-  right_join(select(Stratum, EVALID, ESTN_UNIT_ACRES, ESTN_UNIT_PLOT_COUNT, STRATUM_LABEL, STRATUM_PLOT_COUNT, STRATUM_WEIGHT, STRATUM_CN), tmp7, by = "STRATUM_CN") %>% # join to POP_STATUM values
+  mutate(var_tre = ((tre_s2 - STRATUM_PLOT_COUNT * ((tre_s/STRATUM_PLOT_COUNT)^2))/ (STRATUM_PLOT_COUNT * (STRATUM_PLOT_COUNT -1))),
+         TRE_pop =  ESTN_UNIT_ACRES * STRATUM_WEIGHT * tre_s/ STRATUM_PLOT_COUNT,
+         TRE_var = (ESTN_UNIT_ACRES^2 /ESTN_UNIT_PLOT_COUNT) * ((STRATUM_WEIGHT * STRATUM_PLOT_COUNT * var_tre) +
+                                                                  (1 - STRATUM_WEIGHT) * (STRATUM_PLOT_COUNT / ESTN_UNIT_PLOT_COUNT) * var_tre)) # calculate stratum-damage variance
+
+
+
+tmp9 <- tmp8 %>% group_by( LAND_USE) %>% 
+  summarize(TRE_POP = sum(TRE_pop, na.rm = T),
+            TRE_VAR = sum(TRE_var, na.rm = T),
+            .groups = 'drop') %>%
+  mutate(TRE_STND_ERR = sqrt(TRE_VAR),
+         COMMON_NAME = 'Total',
+         TRE_PCT_WHOLE_POP = (TRE_POP/sum(filter(FIATree, STATUSCD ==1)$TREES_PER_PLOT))*100) 
+
+
+
+
+
+
+
+
+#####################################################################
+### now work with tmp3 to get ownerships as columns- pop estimates and standard error
+tre_pop<-spread(tmp3[ ,c("COMMON_NAME", "LAND_USE","TRE_POP")], "LAND_USE","TRE_POP")
+tre_stnd_err<-spread(tmp3[ ,c("COMMON_NAME", "LAND_USE","TRE_STND_ERR")], "LAND_USE","TRE_STND_ERR")
+
+tre_pop_tot<-spread(tmp9[ ,c("COMMON_NAME", "LAND_USE","TRE_POP")], "LAND_USE","TRE_POP")
+tre_stnd_err_tot<-spread(tmp9[ ,c("COMMON_NAME", "LAND_USE","TRE_STND_ERR")], "LAND_USE","TRE_STND_ERR")
+
+
+
+## add in the row calulated from 'total' per owner group
+tre_pop<-rbind(tre_pop, tre_pop_tot)
+tre_stnd_err<-rbind(tre_stnd_err, tre_stnd_err_tot)
+
+
+# bring in the re-named SE columns
+tre_pop$se_commercial<-tre_stnd_err$Commercial
+tre_pop$se_forestland<-tre_stnd_err$`Forest land`
+tre_pop$se_institutional<-tre_stnd_err$Institutional
+tre_pop$se_multifam<-tre_stnd_err$`Multi-family`
+tre_pop$se_park<-tre_stnd_err$Park
+tre_pop$se_residential<-tre_stnd_err$Residential
+
+
+seedling_landuse <- cbind(tre_pop[ ,1],tre_pop[ ,"Commercial"], tre_pop[ ,"se_commercial"],
+                            tre_pop[ ,"Forest land"], tre_pop[ ,"se_forestland"],
+                             tre_pop[ ,"Institutional"], tre_pop[ ,"se_institutional"],
+                             tre_pop[ ,"Multi-family"], tre_pop[ ,"se_multifam"],
+                             tre_pop[ ,"Park"], tre_pop[ ,"se_park"],
+                             tre_pop[ ,"Residential"], tre_pop[ ,"se_residential"]
+                             )
+
+
+seedling_landuse[is.na(seedling_landuse)] <-0
+
+
+seedling_landuse[,2]<-format(round(seedling_landuse[,2], digits=0), big.mark=",")
+seedling_landuse[,3]<-format(round(seedling_landuse[,3], digits=0), big.mark=",")
+seedling_landuse[,4]<-format(round(seedling_landuse[,4], digits=0),  big.mark=",")
+seedling_landuse[,5]<-format(round(seedling_landuse[,5], digits=0),  big.mark=",")
+seedling_landuse[,6]<-format(round(seedling_landuse[,6], digits=0),  big.mark=",")
+seedling_landuse[,7]<-format(round(seedling_landuse[,7], digits=0), big.mark=",")
+seedling_landuse[,8]<-format(round(seedling_landuse[,8], digits=0), big.mark=",")
+seedling_landuse[,9]<-format(round(seedling_landuse[,9], digits=0),  big.mark=",")
+seedling_landuse[,10]<-format(round(seedling_landuse[,10], digits=0),  big.mark=",")
+seedling_landuse[,11]<-format(round(seedling_landuse[,11], digits=0),  big.mark=",")
+seedling_landuse[,12]<-format(round(seedling_landuse[,12], digits=0),  big.mark=",")
+seedling_landuse[,13]<-format(round(seedling_landuse[,13], digits=0),  big.mark=",")
+
+
+
+
+library(kableExtra)
+a <- nrow(seedling_landuse)
+timse<-  kable(seedling_landuse, format = "html",
+              booktabs = TRUE,
+              #     digits =c(0,0,0,1),
+              # caption = tab. _cap,
+              col.names = (c("Seedling species","Commercial (number)","Commercial standard error",
+                             "Forest land (number)","Forest land standard error",
+                             "Institutional (number)","Institutional standard error",
+                             "Multi-family (number)","Multi-family standard error",
+                             "Park (number)","Park standard error",
+                             "Residential (number)","Residential standard error")),
+              align = c("l","r", "r", "r","r", "r", "r","r", "r", "r","r", "r", "r"),
+              #  format.args = list(big.mark = ','),
+              linesep = "") %>%
+  kable_styling(latex_options="HOLD_position")%>%
+  row_spec(0, bold=TRUE) %>%
+  row_spec(a, bold=TRUE) %>%
+  footnote(general = c("Due to rounding, not all values will add up exactly."), general_title = "", threeparttable = TRUE)
+
+timse
+
+```

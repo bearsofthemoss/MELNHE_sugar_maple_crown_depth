@@ -216,10 +216,16 @@ dnp
 
 
 # couple of clean up vaariable names
-ggplot(dnp, aes(x=variable, y=norm, col=`Fixed effect`))+geom_point(position=position_dodge(.2))+facet_wrap(~Group, scales="free_y", ncol=3)+coord_flip()+
+f2 <- ggplot(dnp, aes(x=variable, y=norm, col=`Fixed effect`))+geom_point(position=position_dodge(.2))+facet_wrap(~Group, scales="free_y", ncol=3)+coord_flip()+
   geom_hline(yintercept=0, linetype='dotted', col = 'black')  +scale_color_manual(values=c("black","blue","red","light blue","pink"))+
   xlab("Leaf characteristics")+ylab("Direction and magnitude of response")+theme(legend.position = "bottom")+
   theme_bw()+theme(panel.grid.major = element_blank(), panel.grid.minor=element_blank())+
   theme(legend.position = c(.85, .25))
 
+
+
+dpi=300    #pixels per square inch
+tiff("Fig_2_sm_crown_11_27_2022.tif", width=10*dpi, height=5*dpi, res=dpi)
+f2
+dev.off()
 
